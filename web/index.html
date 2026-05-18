@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>YourCalendar</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">YC</div>
+          <div>
+            <h1>YourCalendar</h1>
+            <p>Deutscher Fußballkalender</p>
+          </div>
+        </div>
+
+        <section class="panel">
+          <span class="eyebrow">Datenmodus</span>
+          <div class="segmented">
+            <button class="segment" id="liveMode" type="button">Live</button>
+            <button class="segment active" id="sampleMode" type="button">Sample</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <span class="eyebrow">Ligen</span>
+          <label><input type="checkbox" class="league" value="bl1" checked /> 1. Bundesliga</label>
+          <label><input type="checkbox" class="league" value="bl2" checked /> 2. Bundesliga</label>
+          <label><input type="checkbox" class="league" value="bl3" checked /> 3. Liga</label>
+          <label><input type="checkbox" class="league" value="dfb" /> DFB-Pokal</label>
+        </section>
+
+        <section class="panel">
+          <span class="eyebrow">Vereinsfilter</span>
+          <input class="input" id="teamSearch" type="search" placeholder="z.B. Karlsruhe, Bayern, Schalke" />
+          <label class="soft-check"><input type="checkbox" id="includePast" checked /> Gespielte Spiele anzeigen</label>
+        </section>
+
+        <section class="panel favorites-panel">
+          <div class="panel-head">
+            <span class="eyebrow">Favoriten</span>
+            <button class="mini-button" id="clearFavorites" type="button">Leeren</button>
+          </div>
+          <div class="favorites" id="favorites"></div>
+        </section>
+
+        <section class="panel muted">
+          <span class="eyebrow">Quelle</span>
+          <strong id="sourceStatus">Bereit</strong>
+          <p id="sourceNote">Sample-Modus nutzt Testdaten.</p>
+        </section>
+      </aside>
+
+      <section class="content">
+        <header class="topbar">
+          <div>
+            <span class="eyebrow">Dashboard</span>
+            <h2>Spiele & Kalender</h2>
+          </div>
+          <div class="actions">
+            <button class="icon-button" id="refreshButton" type="button" title="Aktualisieren">↻</button>
+            <a class="button secondary" id="downloadLink" href="/download/football.ics">ICS laden</a>
+            <button class="button primary" id="appleButton" type="button">Apple Kalender öffnen</button>
+          </div>
+        </header>
+
+        <section class="summary-grid">
+          <div class="metric"><span>Spiele</span><strong id="eventCount">0</strong></div>
+          <div class="metric"><span>Favoriten</span><strong id="favoriteCount">0</strong></div>
+          <div class="metric"><span>Ausgabe</span><strong>ICS</strong></div>
+        </section>
+
+        <section class="calendar-area">
+          <div class="section-title">
+            <h3>Nächste Spiele</h3>
+            <span id="modeBadge">Sample</span>
+          </div>
+          <div class="event-list" id="eventList"></div>
+        </section>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
