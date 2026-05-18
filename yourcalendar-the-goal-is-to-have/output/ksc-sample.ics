@@ -1,0 +1,30 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//YourCalendar//KSC POC//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Karlsruher SC Fixtures
+X-WR-TIMEZONE:Europe/Berlin
+BEGIN:VEVENT
+UID:sample-ksc-home-2026-05-25@yourcalendar.local
+DTSTAMP:20260518T183727Z
+DTSTART:20260525T133000Z
+DTEND:20260525T153000Z
+SUMMARY:[SAMPLE] Karlsruher SC vs Example FC
+STATUS:CONFIRMED
+LOCATION:BBBank Wildpark
+DESCRIPTION:Sample event for testing calendar publishing. Not a real fixt
+ ure.
+END:VEVENT
+BEGIN:VEVENT
+UID:sample-ksc-away-2026-06-01@yourcalendar.local
+DTSTAMP:20260518T183727Z
+DTSTART:20260601T163000Z
+DTEND:20260601T183000Z
+SUMMARY:[SAMPLE] Example United vs Karlsruher SC
+STATUS:CONFIRMED
+LOCATION:Example Stadium
+DESCRIPTION:Sample event for testing calendar publishing. Not a real fixt
+ ure.
+END:VEVENT
+END:VCALENDAR
