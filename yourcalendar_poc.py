@@ -18,10 +18,11 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
+from yourcalendar_model import CalendarEvent, EventCategory, EventStatus, SourceQuality
 
 
 DEFAULT_TEAM_QUERY = "Karlsruher SC"
@@ -36,19 +37,6 @@ OPENLIGADB_LEAGUES = {
     "bl3": "3. Liga",
     "dfb": "DFB-Pokal",
 }
-
-
-@dataclass(frozen=True)
-class CalendarEvent:
-    uid: str
-    title: str
-    starts_at: datetime
-    ends_at: datetime
-    source: str
-    source_url: str | None = None
-    location: str | None = None
-    description: str | None = None
-    status: str = "CONFIRMED"
 
 
 class POCError(RuntimeError):
@@ -167,10 +155,17 @@ def fetch_thesportsdb_events(
                 title=event_title(raw_event),
                 starts_at=starts_at,
                 ends_at=ends_at,
+                category=EventCategory.SPORTS,
                 location=raw_event.get("strVenue"),
                 source="TheSportsDB",
+                source_quality=SourceQuality.COMMUNITY,
                 source_url=source_url,
                 description=build_description(raw_event, team_id),
+                external_id=event_id,
+                quality_notes=(
+                    "Kickoff time requires production verification.",
+                    "Free/demo schedule coverage may be incomplete.",
+                ),
             )
         )
 
@@ -249,8 +244,14 @@ def fetch_openligadb_events(
                 starts_at=starts_at,
                 ends_at=starts_at + timedelta(hours=2),
                 source="OpenLigaDB",
-                description="\\n".join(description_parts),
-                status="CONFIRMED",
+                category=EventCategory.SPORTS,
+                description="\n".join(description_parts),
+                status=EventStatus.CONFIRMED,
+                source_quality=SourceQuality.COMMUNITY,
+                external_id=str(match_id),
+                quality_notes=(
+                    "OpenLigaDB is suitable for the POC, but not a guaranteed official realtime SLA.",
+                ),
             )
         )
 
@@ -282,7 +283,7 @@ def build_description(raw_event: dict, team_id: str) -> str:
     round_value = raw_event.get("intRound")
     if round_value:
         parts.append(f"Round: {round_value}.")
-    return "\\n".join(parts)
+    return "\n".join(parts)
 
 
 def escape_ics_text(value: str) -> str:
@@ -323,6 +324,10 @@ def utc_stamp(value: datetime) -> str:
     return value.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
 
+def date_stamp(value: datetime) -> str:
+    return value.date().strftime("%Y%m%d")
+
+
 def render_ics(events: list[CalendarEvent], calendar_name: str) -> str:
     now = datetime.now(timezone.utc)
     lines = [
@@ -341,16 +346,26 @@ def render_ics(events: list[CalendarEvent], calendar_name: str) -> str:
                 "BEGIN:VEVENT",
                 f"UID:{escape_ics_text(event.uid)}",
                 f"DTSTAMP:{utc_stamp(now)}",
-                f"DTSTART:{utc_stamp(event.starts_at)}",
-                f"DTEND:{utc_stamp(event.ends_at)}",
                 f"SUMMARY:{escape_ics_text(event.title)}",
-                f"STATUS:{event.status}",
+                f"STATUS:{event.ics_status}",
+                f"CATEGORIES:{escape_ics_text(event.category)}",
             ]
         )
+        if event.all_day:
+            lines.append(f"DTSTART;VALUE=DATE:{date_stamp(event.starts_at)}")
+            lines.append(f"DTEND;VALUE=DATE:{date_stamp(event.ends_at)}")
+        else:
+            lines.append(f"DTSTART:{utc_stamp(event.starts_at)}")
+            lines.append(f"DTEND:{utc_stamp(event.ends_at)}")
         if event.location:
             lines.append(f"LOCATION:{escape_ics_text(event.location)}")
+        description_parts = []
         if event.description:
-            lines.append(f"DESCRIPTION:{escape_ics_text(event.description)}")
+            description_parts.append(event.description)
+        if event.quality_notes:
+            description_parts.append("Quality notes: " + " ".join(event.quality_notes))
+        if description_parts:
+            lines.append(f"DESCRIPTION:{escape_ics_text('\n'.join(description_parts))}")
         if event.source_url:
             lines.append(f"URL:{escape_ics_text(event.source_url)}")
         lines.append("END:VEVENT")
@@ -377,7 +392,10 @@ def build_sample_events(tz_name: str) -> list[CalendarEvent]:
             ends_at=first + timedelta(hours=2),
             location="BBBank Wildpark",
             source="Sample",
+            category=EventCategory.SAMPLE,
+            source_quality=SourceQuality.SAMPLE,
             description="Sample event for testing calendar publishing. Not a real fixture.",
+            quality_notes=("Sample event. Not a real fixture.",),
         ),
         CalendarEvent(
             uid=f"sample-ksc-away-{second.date()}@yourcalendar.local",
@@ -386,7 +404,10 @@ def build_sample_events(tz_name: str) -> list[CalendarEvent]:
             ends_at=second + timedelta(hours=2),
             location="Example Stadium",
             source="Sample",
+            category=EventCategory.SAMPLE,
+            source_quality=SourceQuality.SAMPLE,
             description="Sample event for testing calendar publishing. Not a real fixture.",
+            quality_notes=("Sample event. Not a real fixture.",),
         ),
     ]
 

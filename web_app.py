@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import json
+import os
 import platform
 import subprocess
+from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 
 from yourcalendar_poc import (
     DEFAULT_OUTPUT,
@@ -19,6 +21,7 @@ from yourcalendar_poc import (
     default_football_season,
     fetch_json_list,
     fetch_openligadb_multi_league_events,
+    render_ics,
     write_ics,
 )
 
@@ -27,6 +30,43 @@ ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
 OUTPUT_PATH = ROOT / DEFAULT_OUTPUT
 CALENDAR_NAME = "YourCalendar German Football"
+SAMPLE_CALENDAR_NAME = "YourCalendar Sample Football"
+CURRENT_FEED_ID = "current"
+FEED_PARAM_KEYS = ("sample", "leagues", "team", "favorites", "includePast", "season")
+
+
+@dataclass(frozen=True)
+class PublishedCalendar:
+    feed_id: str
+    name: str
+    description: str
+    params: dict[str, str]
+    sample: bool = False
+
+
+PUBLISHED_CALENDARS = {
+    "football-germany": PublishedCalendar(
+        feed_id="football-germany",
+        name=CALENDAR_NAME,
+        description="Bundesliga, 2. Bundesliga, 3. Liga und DFB-Pokal aus OpenLigaDB.",
+        params={
+            "sample": "false",
+            "leagues": "bl1,bl2,bl3,dfb",
+            "includePast": "false",
+        },
+    ),
+    "sample-ksc": PublishedCalendar(
+        feed_id="sample-ksc",
+        name=SAMPLE_CALENDAR_NAME,
+        description="Sample-Feed mit klar markierten Testspielen.",
+        params={
+            "sample": "true",
+            "leagues": "bl1,bl2,bl3",
+            "includePast": "true",
+        },
+        sample=True,
+    ),
+}
 
 
 def split_title(title: str) -> tuple[str, str]:
@@ -59,6 +99,10 @@ def event_to_dict(event) -> dict:
         "timeLabel": event.starts_at.strftime("%H:%M %Z"),
         "location": event.location,
         "source": event.source,
+        "sourceQuality": event.source_quality,
+        "category": event.category,
+        "allDay": event.all_day,
+        "qualityNotes": list(event.quality_notes),
         "description": event.description,
         "status": event.status,
     }
@@ -68,6 +112,61 @@ def selected_leagues(params: dict[str, list[str]]) -> list[str]:
     raw = params.get("leagues", ["bl1,bl2,bl3"])[0]
     leagues = [item.strip() for item in raw.split(",") if item.strip()]
     return [league for league in leagues if league in OPENLIGADB_LEAGUES]
+
+
+def normalize_feed_params(params: dict[str, list[str]]) -> dict[str, list[str]]:
+    normalized: dict[str, list[str]] = {}
+    for key in FEED_PARAM_KEYS:
+        values = [value for value in params.get(key, []) if value != ""]
+        if values:
+            normalized[key] = values
+    if "sample" not in normalized:
+        normalized["sample"] = ["false"]
+    if "leagues" not in normalized:
+        normalized["leagues"] = ["bl1,bl2,bl3"]
+    if "includePast" not in normalized:
+        normalized["includePast"] = ["false"]
+    return normalized
+
+
+def params_from_calendar(calendar: PublishedCalendar) -> dict[str, list[str]]:
+    return {key: [value] for key, value in calendar.params.items()}
+
+
+def calendar_name_for_params(params: dict[str, list[str]]) -> str:
+    return SAMPLE_CALENDAR_NAME if params.get("sample", ["false"])[0] == "true" else CALENDAR_NAME
+
+
+def feed_path_for_params(params: dict[str, list[str]]) -> str:
+    normalized = normalize_feed_params(params)
+    query_items = [(key, normalized[key][0]) for key in FEED_PARAM_KEYS if key in normalized]
+    query = urlencode(query_items)
+    return f"/feeds/{CURRENT_FEED_ID}.ics?{query}" if query else f"/feeds/{CURRENT_FEED_ID}.ics"
+
+
+def published_feed_path(feed_id: str) -> str:
+    if feed_id not in PUBLISHED_CALENDARS:
+        raise KeyError(feed_id)
+    return f"/feeds/{feed_id}.ics"
+
+
+def feed_filename(feed_id: str) -> str:
+    safe_id = "".join(char for char in feed_id if char.isalnum() or char in ("-", "_"))
+    return f"yourcalendar-{safe_id or CURRENT_FEED_ID}.ics"
+
+
+def resolve_feed(feed_id: str, query: str) -> tuple[str, dict[str, list[str]], bool]:
+    if feed_id == CURRENT_FEED_ID:
+        params = normalize_feed_params(parse_qs(query))
+        return calendar_name_for_params(params), params, params.get("sample", ["false"])[0] == "true"
+
+    calendar = PUBLISHED_CALENDARS[feed_id]
+    return calendar.name, params_from_calendar(calendar), calendar.sample
+
+
+def render_feed(feed_id: str, query: str = "") -> tuple[str, bool]:
+    calendar_name, params, is_sample = resolve_feed(feed_id, query)
+    return render_ics(load_events(params), calendar_name), is_sample
 
 
 def load_events(params: dict[str, list[str]]) -> list:
@@ -119,13 +218,26 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/leagues":
             self.handle_leagues(parsed.query)
             return
+        if parsed.path == "/api/calendars":
+            self.handle_calendars()
+            return
         if parsed.path == "/api/open-apple":
-            self.handle_open_apple()
+            self.handle_open_apple(parsed.query)
+            return
+        if parsed.path.startswith("/feeds/") and parsed.path.endswith(".ics"):
+            self.handle_feed(parsed)
             return
         if parsed.path == "/download/football.ics":
-            self.serve_ics()
+            self.handle_legacy_download(parsed.query)
             return
         super().do_GET()
+
+    def do_HEAD(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path.startswith("/feeds/") and parsed.path.endswith(".ics"):
+            self.handle_feed(parsed, send_body=False)
+            return
+        super().do_HEAD()
 
     def log_message(self, format: str, *args) -> None:
         return
@@ -133,17 +245,21 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
     def handle_events(self, query: str) -> None:
         params = parse_qs(query)
         try:
+            normalized_params = normalize_feed_params(params)
             events = load_events(params)
-            write_ics(events, OUTPUT_PATH, CALENDAR_NAME)
-            use_sample = params.get("sample", ["false"])[0] == "true"
+            use_sample = normalized_params.get("sample", ["false"])[0] == "true"
+            feed_url = feed_path_for_params(normalized_params)
             self.send_json(
                 {
                     "ok": True,
                     "mode": "sample" if use_sample else "live",
                     "count": len(events),
                     "events": [event_to_dict(event) for event in events],
-                    "icsPath": str(OUTPUT_PATH),
-                    "downloadUrl": "/download/football.ics",
+                    "feedUrl": feed_url,
+                    "subscribeUrl": self.absolute_url(feed_url),
+                    "downloadUrl": feed_url,
+                    "sampleFeedUrl": published_feed_path("sample-ksc"),
+                    "publishedFeedUrl": published_feed_path("football-germany"),
                     "sourceNote": source_note(use_sample, len(events)),
                 }
             )
@@ -157,6 +273,20 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
                 },
                 status=HTTPStatus.BAD_GATEWAY,
             )
+
+    def handle_calendars(self) -> None:
+        calendars = [
+            {
+                "id": calendar.feed_id,
+                "name": calendar.name,
+                "description": calendar.description,
+                "sample": calendar.sample,
+                "feedUrl": published_feed_path(calendar.feed_id),
+                "subscribeUrl": self.absolute_url(published_feed_path(calendar.feed_id)),
+            }
+            for calendar in PUBLISHED_CALENDARS.values()
+        ]
+        self.send_json({"ok": True, "calendars": calendars})
 
     def handle_leagues(self, query: str) -> None:
         params = parse_qs(query)
@@ -179,39 +309,58 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
             leagues.append({"id": shortcut, "name": name, "teams": teams})
         self.send_json({"ok": True, "season": season, "leagues": leagues})
 
-    def handle_open_apple(self) -> None:
+    def handle_open_apple(self, query: str) -> None:
         if platform.system() != "Darwin":
             self.send_json(
                 {"ok": False, "error": "Apple Calendar import is only available on macOS."},
                 status=HTTPStatus.BAD_REQUEST,
             )
             return
-        if not OUTPUT_PATH.exists():
-            self.send_json(
-                {"ok": False, "error": "No ICS file exists yet. Generate events first."},
-                status=HTTPStatus.BAD_REQUEST,
-            )
-            return
         try:
+            params = normalize_feed_params(parse_qs(query))
+            write_ics(load_events(params), OUTPUT_PATH, calendar_name_for_params(params))
             subprocess.run(["open", str(OUTPUT_PATH)], check=True)
             self.send_json({"ok": True, "message": "Apple Calendar was opened."})
+        except (POCError, ValueError) as exc:
+            self.send_json(
+                {"ok": False, "error": str(exc)},
+                status=HTTPStatus.BAD_GATEWAY,
+            )
         except subprocess.CalledProcessError as exc:
             self.send_json(
                 {"ok": False, "error": f"Could not open Apple Calendar: {exc}"},
                 status=HTTPStatus.INTERNAL_SERVER_ERROR,
             )
 
-    def serve_ics(self) -> None:
-        if not OUTPUT_PATH.exists():
-            self.send_error(HTTPStatus.NOT_FOUND, "No calendar file generated yet.")
+    def handle_feed(self, parsed, send_body: bool = True) -> None:
+        feed_id = parsed.path.removeprefix("/feeds/").removesuffix(".ics")
+        try:
+            self.serve_feed(feed_id, parsed.query, disposition="inline", send_body=send_body)
+        except KeyError:
+            self.send_error(HTTPStatus.NOT_FOUND, "Unknown calendar feed.")
+        except (POCError, ValueError) as exc:
+            self.send_error(HTTPStatus.BAD_GATEWAY, str(exc))
+
+    def handle_legacy_download(self, query: str) -> None:
+        try:
+            self.serve_feed(CURRENT_FEED_ID, query, disposition="attachment")
+        except (POCError, ValueError) as exc:
+            self.send_error(HTTPStatus.BAD_GATEWAY, str(exc))
+
+    def serve_feed(self, feed_id: str, query: str, disposition: str, send_body: bool = True) -> None:
+        content, is_sample = render_feed(feed_id, query)
+        content_bytes = content.encode("utf-8")
+        if is_sample and "[SAMPLE]" not in content:
+            self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Sample feed is not clearly marked.")
             return
-        content = OUTPUT_PATH.read_bytes()
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", "text/calendar; charset=utf-8")
-        self.send_header("Content-Disposition", 'attachment; filename="yourcalendar-football.ics"')
-        self.send_header("Content-Length", str(len(content)))
+        self.send_header("Content-Disposition", f'{disposition}; filename="{feed_filename(feed_id)}"')
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Content-Length", str(len(content_bytes)))
         self.end_headers()
-        self.wfile.write(content)
+        if send_body:
+            self.wfile.write(content_bytes)
 
     def send_json(self, payload: dict, status: HTTPStatus = HTTPStatus.OK) -> None:
         content = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -220,6 +369,15 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(content)))
         self.end_headers()
         self.wfile.write(content)
+
+    def absolute_url(self, path: str) -> str:
+        public_base = os.environ.get("YOURCALENDAR_PUBLIC_BASE_URL", "").rstrip("/")
+        if public_base:
+            return f"{public_base}{path}"
+        forwarded_proto = self.headers.get("X-Forwarded-Proto")
+        scheme = forwarded_proto.split(",")[0].strip() if forwarded_proto else "http"
+        host = self.headers.get("Host", "127.0.0.1:8765")
+        return f"{scheme}://{host}{path}"
 
 
 def source_note(use_sample: bool, count: int) -> str:
