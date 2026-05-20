@@ -66,8 +66,33 @@ The UI supports:
 - Switching between live data and sample data.
 - Filtering by club name.
 - Local browser favorites for clubs.
-- Generating an `.ics` file from the current filters.
-- Opening the generated `.ics` file in Apple Calendar on macOS.
+- Stable `.ics` feed URLs for the current filters.
+- Copying a calendar subscription link for Apple Calendar, Google Calendar and
+  Outlook.
+- Opening the current filtered feed in Apple Calendar on macOS.
+
+The local feed endpoint is generated from the current filters:
+
+```text
+http://127.0.0.1:8765/feeds/current.ics?sample=true&leagues=bl1%2Cbl2%2Cbl3&includePast=true
+```
+
+Published feed examples:
+
+```text
+http://127.0.0.1:8765/feeds/football-germany.ics
+http://127.0.0.1:8765/feeds/sample-ksc.ics
+```
+
+In production, set `YOURCALENDAR_PUBLIC_BASE_URL` to the deployed HTTPS origin
+so the UI exposes subscription URLs such as:
+
+```bash
+YOURCALENDAR_PUBLIC_BASE_URL=https://calendar.example.com python3 web_app.py
+```
+
+Sample feeds are rendered with `[SAMPLE]` event summaries and the `sample`
+category so they cannot be confused with real fixtures.
 
 Important: OpenLigaDB is useful for this POC, but it is not the same as a
 commercial real-time provider with guaranteed update latency and SLA.

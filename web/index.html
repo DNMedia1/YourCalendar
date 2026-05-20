@@ -62,7 +62,7 @@
           </div>
           <div class="actions">
             <button class="icon-button" id="refreshButton" type="button" title="Aktualisieren">↻</button>
-            <a class="button secondary" id="downloadLink" href="/download/football.ics">ICS laden</a>
+            <a class="button secondary" id="downloadLink" href="/feeds/current.ics?sample=true&leagues=bl1%2Cbl2%2Cbl3&includePast=true">ICS laden</a>
             <button class="button primary" id="appleButton" type="button">Apple Kalender öffnen</button>
           </div>
         </header>
@@ -71,6 +71,22 @@
           <div class="metric"><span>Spiele</span><strong id="eventCount">0</strong></div>
           <div class="metric"><span>Favoriten</span><strong id="favoriteCount">0</strong></div>
           <div class="metric"><span>Ausgabe</span><strong>ICS</strong></div>
+        </section>
+
+        <section class="subscription-area">
+          <div>
+            <span class="eyebrow">Kalenderabo</span>
+            <h3>Aktueller Feed</h3>
+          </div>
+          <div class="subscription-row">
+            <input class="input feed-url" id="feedUrl" type="url" readonly value="" aria-label="ICS Feed URL" />
+            <button class="button secondary" id="copyFeedButton" type="button">Link kopieren</button>
+          </div>
+          <div class="subscribe-notes">
+            <span>Apple: Datei > Neues Kalenderabonnement</span>
+            <span>Google: Kalender hinzufügen > Per URL</span>
+            <span>Outlook: Kalender hinzufügen > Aus dem Internet</span>
+          </div>
         </section>
 
         <section class="calendar-area">

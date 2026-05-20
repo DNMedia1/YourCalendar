@@ -11,6 +11,9 @@ const elements = {
   sampleMode: $("sampleMode"),
   refreshButton: $("refreshButton"),
   appleButton: $("appleButton"),
+  copyFeedButton: $("copyFeedButton"),
+  downloadLink: $("downloadLink"),
+  feedUrl: $("feedUrl"),
   teamSearch: $("teamSearch"),
   includePast: $("includePast"),
   eventList: $("eventList"),
@@ -55,12 +58,14 @@ async function loadEvents() {
     const payload = await response.json();
     if (!payload.ok) throw new Error(payload.error || "Unbekannter Fehler");
     state.events = payload.events;
+    updateFeedLinks(payload);
     elements.sourceStatus.textContent = payload.mode === "sample" ? "Sample" : "OpenLigaDB";
     elements.sourceNote.textContent = payload.sourceNote;
     elements.modeBadge.textContent = payload.mode === "sample" ? "Sample" : "Live";
     renderEvents();
   } catch (error) {
     state.events = [];
+    updateFeedLinks();
     elements.sourceStatus.textContent = "Fehler";
     elements.sourceNote.textContent = error.message;
     renderEvents();
@@ -73,6 +78,15 @@ async function loadEvents() {
 function setBusy(isBusy) {
   elements.refreshButton.disabled = isBusy;
   elements.appleButton.disabled = isBusy;
+  elements.copyFeedButton.disabled = isBusy;
+}
+
+function updateFeedLinks(payload = null) {
+  const fallback = `/feeds/current.ics?${params().toString()}`;
+  const feedUrl = payload?.feedUrl || fallback;
+  const subscribeUrl = payload?.subscribeUrl || new URL(feedUrl, window.location.origin).toString();
+  elements.downloadLink.href = feedUrl;
+  elements.feedUrl.value = subscribeUrl;
 }
 
 function renderEvents() {
@@ -146,12 +160,22 @@ function escapeAttribute(value) {
 
 async function openAppleCalendar() {
   try {
-    const response = await fetch("/api/open-apple");
+    const response = await fetch(`/api/open-apple?${params().toString()}`);
     const payload = await response.json();
     if (!payload.ok) throw new Error(payload.error || "Apple Kalender konnte nicht geöffnet werden.");
     toast("Apple Kalender wurde geöffnet.");
   } catch (error) {
     toast(error.message, true);
+  }
+}
+
+async function copyFeedLink() {
+  try {
+    await navigator.clipboard.writeText(elements.feedUrl.value);
+    toast("Feed-Link kopiert.");
+  } catch (error) {
+    elements.feedUrl.select();
+    toast("Link ist markiert und kann kopiert werden.");
   }
 }
 
@@ -167,6 +191,7 @@ elements.liveMode.addEventListener("click", () => setMode(false));
 elements.sampleMode.addEventListener("click", () => setMode(true));
 elements.refreshButton.addEventListener("click", loadEvents);
 elements.appleButton.addEventListener("click", openAppleCalendar);
+elements.copyFeedButton.addEventListener("click", copyFeedLink);
 elements.teamSearch.addEventListener("input", () => {
   window.clearTimeout(elements.teamSearch._timer);
   elements.teamSearch._timer = window.setTimeout(loadEvents, 250);
@@ -180,4 +205,5 @@ $("clearFavorites").addEventListener("click", () => {
 });
 
 renderFavorites();
+updateFeedLinks();
 loadEvents();
