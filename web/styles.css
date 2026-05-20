@@ -22,7 +22,7 @@ body {
 }
 
 button, input, a { font: inherit; }
-h1, h2, h3, p { margin: 0; }
+h1, h2, h3, h4, p { margin: 0; }
 
 .app-shell {
   display: grid;
@@ -239,6 +239,163 @@ h3 { font-size: 18px; }
   margin-bottom: 22px;
 }
 
+.discover-area {
+  margin-bottom: 22px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.section-title.compact {
+  align-items: flex-start;
+}
+
+#catalogStatus {
+  min-height: 28px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #eef4ef;
+  color: var(--green-strong);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.category-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+}
+
+.category-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.category-tab strong {
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #eef4ef;
+  color: var(--green-strong);
+  font-size: 12px;
+}
+
+.category-tab.active {
+  border-color: var(--green);
+  background: var(--green);
+  color: #fff;
+}
+
+.category-tab.active strong {
+  background: rgba(255, 255, 255, .18);
+  color: #fff;
+}
+
+.calendar-catalog {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 20px;
+}
+
+.calendar-card, .catalog-empty {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfdfb;
+}
+
+.calendar-card-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.calendar-category {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.calendar-card h4 {
+  font-size: 20px;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
+}
+
+.calendar-card p, .catalog-empty p, .catalog-empty span {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.status-pill {
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #e7f5ed;
+  color: var(--green-strong);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.status-pill.sample {
+  background: #fff6d8;
+  color: #6f5206;
+}
+
+.source-row {
+  display: grid;
+  gap: 4px;
+  padding-top: 2px;
+}
+
+.source-row span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.source-row strong {
+  overflow-wrap: anywhere;
+}
+
+.calendar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.catalog-empty {
+  grid-column: 1 / -1;
+  min-height: 150px;
+  align-content: center;
+}
+
 .subscription-area {
   display: grid;
   gap: 14px;
@@ -408,6 +565,11 @@ h3 { font-size: 18px; }
     border-bottom: 1px solid var(--line);
   }
 
+  .content {
+    order: -1;
+    padding: 22px;
+  }
+
   .topbar {
     align-items: flex-start;
     flex-direction: column;
@@ -419,6 +581,15 @@ h3 { font-size: 18px; }
 
   .summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .calendar-catalog {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .category-tabs {
+    padding: 12px 16px;
   }
 
   .subscription-row {

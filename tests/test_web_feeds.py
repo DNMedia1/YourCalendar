@@ -5,6 +5,7 @@ from urllib.parse import parse_qs, urlparse
 
 from web_app import (
     CURRENT_FEED_ID,
+    calendar_catalog,
     feed_filename,
     feed_path_for_params,
     normalize_feed_params,
@@ -57,6 +58,20 @@ class WebFeedTest(unittest.TestCase):
 
     def test_feed_filename_sanitizes_feed_id(self) -> None:
         self.assertEqual(feed_filename("../football"), "yourcalendar-football.ics")
+
+    def test_calendar_catalog_groups_published_and_empty_categories(self) -> None:
+        categories = calendar_catalog(lambda path: f"https://example.test{path}")
+        by_id = {category["id"]: category for category in categories}
+
+        self.assertIn("sports", by_id)
+        self.assertIn("politics", by_id)
+        self.assertIn("city", by_id)
+        self.assertIn("culture", by_id)
+        self.assertIn("holidays", by_id)
+        self.assertGreaterEqual(by_id["sports"]["calendarCount"], 1)
+        self.assertEqual(by_id["politics"]["calendarCount"], 0)
+        self.assertEqual(by_id["sports"]["calendars"][0]["sourceLabel"], "OpenLigaDB, Community-Daten")
+        self.assertTrue(by_id["sports"]["calendars"][0]["subscribeUrl"].startswith("https://example.test/feeds/"))
 
 
 if __name__ == "__main__":

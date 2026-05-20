@@ -38,17 +38,57 @@ FEED_PARAM_KEYS = ("sample", "leagues", "team", "favorites", "includePast", "sea
 @dataclass(frozen=True)
 class PublishedCalendar:
     feed_id: str
+    category_id: str
     name: str
     description: str
+    source_label: str
     params: dict[str, str]
     sample: bool = False
+
+
+@dataclass(frozen=True)
+class CalendarCategory:
+    category_id: str
+    name: str
+    description: str
+
+
+CALENDAR_CATEGORIES = (
+    CalendarCategory(
+        category_id="sports",
+        name="Sport",
+        description="Spielpläne und Wettbewerbe, die als abonnierbare Kalender bereitstehen.",
+    ),
+    CalendarCategory(
+        category_id="politics",
+        name="Politik",
+        description="Politische Termine und öffentliche Sitzungen. Noch nicht im MVP befüllt.",
+    ),
+    CalendarCategory(
+        category_id="city",
+        name="Stadt",
+        description="Kommunale Termine, Stadtfeste und lokale Veranstaltungen. Noch nicht befüllt.",
+    ),
+    CalendarCategory(
+        category_id="culture",
+        name="Kultur",
+        description="Kulturprogramme, Festivals und Veranstaltungen. Noch nicht befüllt.",
+    ),
+    CalendarCategory(
+        category_id="holidays",
+        name="Ferien",
+        description="Ferien- und Feiertagskalender. Noch nicht befuellt.",
+    ),
+)
 
 
 PUBLISHED_CALENDARS = {
     "football-germany": PublishedCalendar(
         feed_id="football-germany",
+        category_id="sports",
         name=CALENDAR_NAME,
         description="Bundesliga, 2. Bundesliga, 3. Liga und DFB-Pokal aus OpenLigaDB.",
+        source_label="OpenLigaDB, Community-Daten",
         params={
             "sample": "false",
             "leagues": "bl1,bl2,bl3,dfb",
@@ -57,8 +97,10 @@ PUBLISHED_CALENDARS = {
     ),
     "sample-ksc": PublishedCalendar(
         feed_id="sample-ksc",
+        category_id="sports",
         name=SAMPLE_CALENDAR_NAME,
         description="Sample-Feed mit klar markierten Testspielen.",
+        source_label="YourCalendar Sample-Daten",
         params={
             "sample": "true",
             "leagues": "bl1,bl2,bl3",
@@ -169,6 +211,43 @@ def render_feed(feed_id: str, query: str = "") -> tuple[str, bool]:
     return render_ics(load_events(params), calendar_name), is_sample
 
 
+def calendar_payload(calendar: PublishedCalendar, absolute_url) -> dict:
+    feed_url = published_feed_path(calendar.feed_id)
+    return {
+        "id": calendar.feed_id,
+        "categoryId": calendar.category_id,
+        "name": calendar.name,
+        "description": calendar.description,
+        "sourceLabel": calendar.source_label,
+        "sample": calendar.sample,
+        "status": "sample" if calendar.sample else "available",
+        "statusLabel": "Sample" if calendar.sample else "Verfügbar",
+        "feedUrl": feed_url,
+        "subscribeUrl": absolute_url(feed_url),
+    }
+
+
+def calendar_catalog(absolute_url) -> list[dict]:
+    calendars_by_category: dict[str, list[dict]] = {
+        category.category_id: [] for category in CALENDAR_CATEGORIES
+    }
+    for calendar in PUBLISHED_CALENDARS.values():
+        calendars_by_category.setdefault(calendar.category_id, []).append(
+            calendar_payload(calendar, absolute_url)
+        )
+
+    return [
+        {
+            "id": category.category_id,
+            "name": category.name,
+            "description": category.description,
+            "calendarCount": len(calendars_by_category.get(category.category_id, [])),
+            "calendars": calendars_by_category.get(category.category_id, []),
+        }
+        for category in CALENDAR_CATEGORIES
+    ]
+
+
 def load_events(params: dict[str, list[str]]) -> list:
     use_sample = params.get("sample", ["false"])[0] == "true"
     if use_sample:
@@ -275,18 +354,13 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
             )
 
     def handle_calendars(self) -> None:
+        categories = calendar_catalog(self.absolute_url)
         calendars = [
-            {
-                "id": calendar.feed_id,
-                "name": calendar.name,
-                "description": calendar.description,
-                "sample": calendar.sample,
-                "feedUrl": published_feed_path(calendar.feed_id),
-                "subscribeUrl": self.absolute_url(published_feed_path(calendar.feed_id)),
-            }
-            for calendar in PUBLISHED_CALENDARS.values()
+            calendar
+            for category in categories
+            for calendar in category["calendars"]
         ]
-        self.send_json({"ok": True, "calendars": calendars})
+        self.send_json({"ok": True, "categories": categories, "calendars": calendars})
 
     def handle_leagues(self, query: str) -> None:
         params = parse_qs(query)

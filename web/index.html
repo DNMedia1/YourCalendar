@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>YourCalendar</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b6b45'/%3E%3Ctext x='32' y='39' text-anchor='middle' font-size='22' font-family='Arial' font-weight='700' fill='white'%3EYC%3C/text%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -57,8 +58,8 @@
       <section class="content">
         <header class="topbar">
           <div>
-            <span class="eyebrow">Dashboard</span>
-            <h2>Spiele & Kalender</h2>
+            <span class="eyebrow">Entdecken</span>
+            <h2>Kalender finden</h2>
           </div>
           <div class="actions">
             <button class="icon-button" id="refreshButton" type="button" title="Aktualisieren">↻</button>
@@ -66,6 +67,18 @@
             <button class="button primary" id="appleButton" type="button">Apple Kalender öffnen</button>
           </div>
         </header>
+
+        <section class="discover-area" aria-labelledby="discoverTitle">
+          <div class="section-title compact">
+            <div>
+              <span class="eyebrow">Kategorien</span>
+              <h3 id="discoverTitle">Verfügbare Kalender</h3>
+            </div>
+            <span id="catalogStatus">Lädt</span>
+          </div>
+          <div class="category-tabs" id="categoryTabs" role="tablist" aria-label="Kalenderkategorien"></div>
+          <div class="calendar-catalog" id="calendarCatalog"></div>
+        </section>
 
         <section class="summary-grid">
           <div class="metric"><span>Spiele</span><strong id="eventCount">0</strong></div>

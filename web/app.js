@@ -1,5 +1,7 @@
 const state = {
   sample: true,
+  categories: [],
+  selectedCategoryId: "sports",
   events: [],
   favorites: JSON.parse(localStorage.getItem("yourcalendar:favorites") || "[]"),
 };
@@ -14,6 +16,9 @@ const elements = {
   copyFeedButton: $("copyFeedButton"),
   downloadLink: $("downloadLink"),
   feedUrl: $("feedUrl"),
+  catalogStatus: $("catalogStatus"),
+  categoryTabs: $("categoryTabs"),
+  calendarCatalog: $("calendarCatalog"),
   teamSearch: $("teamSearch"),
   includePast: $("includePast"),
   eventList: $("eventList"),
@@ -87,6 +92,93 @@ function updateFeedLinks(payload = null) {
   const subscribeUrl = payload?.subscribeUrl || new URL(feedUrl, window.location.origin).toString();
   elements.downloadLink.href = feedUrl;
   elements.feedUrl.value = subscribeUrl;
+}
+
+async function loadCalendars() {
+  try {
+    const response = await fetch("/api/calendars");
+    const payload = await response.json();
+    if (!payload.ok) throw new Error(payload.error || "Kalender konnten nicht geladen werden.");
+    state.categories = payload.categories || [];
+    const selectedExists = state.categories.some((category) => category.id === state.selectedCategoryId);
+    state.selectedCategoryId = selectedExists ? state.selectedCategoryId : state.categories[0]?.id || "";
+    renderCatalog();
+  } catch (error) {
+    state.categories = [];
+    elements.catalogStatus.textContent = "Fehler";
+    elements.categoryTabs.innerHTML = "";
+    elements.calendarCatalog.innerHTML = `<div class="empty-state">Kalenderliste konnte nicht geladen werden.</div>`;
+    toast(error.message, true);
+  }
+}
+
+function renderCatalog() {
+  const total = state.categories.reduce((sum, category) => sum + category.calendarCount, 0);
+  elements.catalogStatus.textContent = `${total} Kalender`;
+  renderCategoryTabs();
+  renderCalendarCatalog();
+}
+
+function renderCategoryTabs() {
+  elements.categoryTabs.innerHTML = state.categories.map((category) => {
+    const selected = category.id === state.selectedCategoryId;
+    return `
+      <button class="category-tab${selected ? " active" : ""}" type="button" role="tab" aria-selected="${selected}" data-category="${escapeAttribute(category.id)}">
+        <span>${escapeHtml(category.name)}</span>
+        <strong>${category.calendarCount}</strong>
+      </button>
+    `;
+  }).join("");
+  document.querySelectorAll(".category-tab").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedCategoryId = button.dataset.category;
+      renderCatalog();
+    });
+  });
+}
+
+function renderCalendarCatalog() {
+  const category = state.categories.find((item) => item.id === state.selectedCategoryId);
+  if (!category) {
+    elements.calendarCatalog.innerHTML = `<div class="empty-state">Noch keine Kategorien verfügbar.</div>`;
+    return;
+  }
+
+  if (!category.calendars.length) {
+    elements.calendarCatalog.innerHTML = `
+      <article class="catalog-empty">
+        <strong>${escapeHtml(category.name)} ist vorbereitet</strong>
+        <p>${escapeHtml(category.description)}</p>
+        <span>Kalender folgen, sobald eine verlässliche Quelle angebunden ist.</span>
+      </article>
+    `;
+    return;
+  }
+
+  elements.calendarCatalog.innerHTML = category.calendars.map((calendar) => `
+    <article class="calendar-card">
+      <div class="calendar-card-main">
+        <div>
+          <span class="calendar-category">${escapeHtml(category.name)}</span>
+          <h4>${escapeHtml(calendar.name)}</h4>
+        </div>
+        <span class="status-pill${calendar.sample ? " sample" : ""}">${escapeHtml(calendar.statusLabel)}</span>
+      </div>
+      <p>${escapeHtml(calendar.description)}</p>
+      <div class="source-row">
+        <span>Quelle</span>
+        <strong>${escapeHtml(calendar.sourceLabel)}</strong>
+      </div>
+      <div class="calendar-actions">
+        <a class="button primary" href="${escapeAttribute(calendar.feedUrl)}">ICS abonnieren</a>
+        <button class="button secondary calendar-copy" type="button" data-url="${escapeAttribute(calendar.subscribeUrl)}">Link kopieren</button>
+      </div>
+    </article>
+  `).join("");
+
+  document.querySelectorAll(".calendar-copy").forEach((button) => {
+    button.addEventListener("click", () => copyText(button.dataset.url, "Kalender-Link kopiert."));
+  });
 }
 
 function renderEvents() {
@@ -170,12 +262,20 @@ async function openAppleCalendar() {
 }
 
 async function copyFeedLink() {
+  copyText(elements.feedUrl.value, "Feed-Link kopiert.");
+}
+
+async function copyText(value, successMessage) {
   try {
-    await navigator.clipboard.writeText(elements.feedUrl.value);
-    toast("Feed-Link kopiert.");
+    await navigator.clipboard.writeText(value);
+    toast(successMessage);
   } catch (error) {
-    elements.feedUrl.select();
-    toast("Link ist markiert und kann kopiert werden.");
+    if (value === elements.feedUrl.value) {
+      elements.feedUrl.select();
+      toast("Link ist markiert und kann kopiert werden.");
+      return;
+    }
+    toast("Link konnte nicht automatisch kopiert werden.", true);
   }
 }
 
@@ -185,6 +285,14 @@ function toast(message, isError = false) {
   node.textContent = message;
   document.body.appendChild(node);
   setTimeout(() => node.remove(), 3600);
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }
 
 elements.liveMode.addEventListener("click", () => setMode(false));
@@ -206,4 +314,5 @@ $("clearFavorites").addEventListener("click", () => {
 
 renderFavorites();
 updateFeedLinks();
+loadCalendars();
 loadEvents();
