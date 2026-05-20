@@ -59,6 +59,10 @@ def event_to_dict(event) -> dict:
         "timeLabel": event.starts_at.strftime("%H:%M %Z"),
         "location": event.location,
         "source": event.source,
+        "sourceQuality": event.source_quality,
+        "category": event.category,
+        "allDay": event.all_day,
+        "qualityNotes": list(event.quality_notes),
         "description": event.description,
         "status": event.status,
     }

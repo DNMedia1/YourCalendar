@@ -108,6 +108,15 @@ THESPORTSDB_API_KEY=your_key python3 yourcalendar_poc.py --show-events
 - A local `.ics` import is static. Automatic updates require hosting the file
   and subscribing to its HTTPS URL.
 
+## Event Model
+
+The POC now normalizes source data into a dedicated internal `CalendarEvent`
+model before rendering ICS. The model covers timezone-aware start/end times,
+all-day events, source quality, category, status, external IDs, locations,
+source URLs, and data-quality notes.
+
+See `docs/event-model.md` for the current schema and validation rules.
+
 ## Next Technical Spikes
 
 1. Validate whether TheSportsDB is good enough for KSC.
