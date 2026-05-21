@@ -13,6 +13,7 @@ from web_app import (
     normalize_feed_params,
     render_feed,
     resolve_feed,
+    source_health_payload,
     sports_coverage_payload,
 )
 from yourcalendar_sources import source_plan_payload
@@ -122,6 +123,27 @@ class WebFeedTest(unittest.TestCase):
         self.assertIn("football-germany", by_id["openligadb-football-poc"]["calendarIds"])
         self.assertIn("global-combat-events", by_id["global-combat-provider"]["calendarIds"])
         self.assertTrue(by_id["championship-detector"]["acceptanceCriteria"])
+
+    def test_source_health_marks_empty_live_queries_with_recovery_hints(self) -> None:
+        params = normalize_feed_params({"sample": ["false"], "leagues": ["bl2"], "season": ["2026"]})
+
+        health = source_health_payload(False, 0, params)
+
+        self.assertEqual(health["status"], "empty")
+        self.assertEqual(health["label"], "Keine Termine")
+        self.assertIn("2026", " ".join(health["hints"]))
+        self.assertEqual(health["selectedLeagues"], ["2. Bundesliga"])
+
+    def test_source_health_uses_safe_error_copy_for_openligadb_failures(self) -> None:
+        params = normalize_feed_params({"sample": ["false"], "leagues": ["bl1"]})
+
+        health = source_health_payload(False, 0, params, "HTTP 500 while fetching test-url")
+
+        self.assertEqual(health["status"], "error")
+        self.assertEqual(health["label"], "Quelle gestört")
+        self.assertIn("nicht gelesen", health["title"])
+        self.assertIn("Kalender bleibt verfügbar", health["detail"])
+        self.assertEqual(health["technicalDetail"], "HTTP 500 while fetching test-url")
 
 
 if __name__ == "__main__":

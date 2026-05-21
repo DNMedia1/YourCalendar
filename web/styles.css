@@ -114,6 +114,18 @@ h3 { font-size: 18px; }
   background: #f7faf7;
 }
 
+.panel.muted strong[data-status="ok"] {
+  color: var(--green-strong);
+}
+
+.panel.muted strong[data-status="empty"] {
+  color: #7a4600;
+}
+
+.panel.muted strong[data-status="error"] {
+  color: var(--red);
+}
+
 .panel-head {
   display: flex;
   align-items: center;
@@ -807,6 +819,21 @@ h3 { font-size: 18px; }
   font-weight: 850;
 }
 
+#modeBadge[data-status="ok"] {
+  background: #e7f5ed;
+  color: var(--green-strong);
+}
+
+#modeBadge[data-status="empty"] {
+  background: #fff4e6;
+  color: #7a4600;
+}
+
+#modeBadge[data-status="error"] {
+  background: #ffe8ea;
+  color: var(--red);
+}
+
 .event-list {
   display: grid;
 }
@@ -860,6 +887,33 @@ h3 { font-size: 18px; }
 .empty-state {
   padding: 38px 20px;
   text-align: center;
+}
+
+.source-empty {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+}
+
+.source-empty strong {
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.source-empty p {
+  max-width: 620px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.source-empty ul {
+  display: grid;
+  gap: 6px;
+  max-width: 620px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  text-align: left;
 }
 
 .list-note {

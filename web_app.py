@@ -334,6 +334,10 @@ def selected_leagues(params: dict[str, list[str]]) -> list[str]:
     return [league for league in leagues if league in OPENLIGADB_LEAGUES]
 
 
+def selected_league_names(params: dict[str, list[str]]) -> list[str]:
+    return [OPENLIGADB_LEAGUES[league] for league in selected_leagues(params)]
+
+
 def normalize_feed_params(params: dict[str, list[str]]) -> dict[str, list[str]]:
     normalized: dict[str, list[str]] = {}
     for key in FEED_PARAM_KEYS:
@@ -538,6 +542,69 @@ def load_events(params: dict[str, list[str]]) -> list:
     return events
 
 
+def source_health_payload(
+    use_sample: bool,
+    count: int,
+    params: dict[str, list[str]],
+    error: str | None = None,
+) -> dict:
+    if use_sample:
+        return {
+            "status": "sample",
+            "label": "Sample",
+            "title": "Sample-Daten aktiv",
+            "detail": "Diese Termine sind Testdaten und keine echten Spiele.",
+            "hints": ["Zum Prüfen der echten Quelle in den Live-Modus wechseln."],
+            "selectedLeagues": selected_league_names(params),
+        }
+
+    if error:
+        return {
+            "status": "error",
+            "label": "Quelle gestört",
+            "title": "OpenLigaDB konnte nicht gelesen werden",
+            "detail": "Der Kalender bleibt verfügbar, aber dieser Abruf hat keine verlässlichen Live-Daten geliefert.",
+            "hints": [
+                "Netzwerk, API-Erreichbarkeit und Liga-Auswahl prüfen.",
+                "Sample-Modus nutzen, wenn nur der Abo-Flow getestet werden soll.",
+            ],
+            "selectedLeagues": selected_league_names(params),
+            "technicalDetail": error,
+        }
+
+    if count == 0:
+        season = params.get("season", [""])[0] or str(default_football_season())
+        return {
+            "status": "empty",
+            "label": "Keine Termine",
+            "title": "Keine Spiele für diese Auswahl",
+            "detail": (
+                "OpenLigaDB hat für diese Ligen, Saison und Filter keine Termine geliefert. "
+                "Das kann bei Saisonende, noch nicht veröffentlichten Spielplänen oder engen Teamfiltern passieren."
+            ),
+            "hints": [
+                f"Geprüfte Saison: {season}.",
+                "Gespielte Spiele anzeigen oder Teamfilter leeren.",
+                "Andere Liga auswählen, falls der Wettbewerb noch nicht terminiert ist.",
+            ],
+            "selectedLeagues": selected_league_names(params),
+        }
+
+    return {
+        "status": "ok",
+        "label": "OpenLigaDB",
+        "title": "OpenLigaDB liefert Termine",
+        "detail": (
+            "Freie Spielplan-/Ergebnisdaten für den POC. "
+            "Für garantierte Realtime-Daten braucht es später einen Provider mit SLA."
+        ),
+        "hints": [
+            "Anstoßzeiten und Verlegungen bleiben als POC-Qualitätsrisiko markiert.",
+        ],
+        "selectedLeagues": selected_league_names(params),
+    }
+
+
 class YourCalendarHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(WEB_ROOT), **kwargs)
@@ -576,32 +643,36 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
 
     def handle_events(self, query: str) -> None:
         params = parse_qs(query)
+        normalized_params = normalize_feed_params(params)
         try:
-            normalized_params = normalize_feed_params(params)
-            events = load_events(params)
+            events = load_events(normalized_params)
             use_sample = normalized_params.get("sample", ["false"])[0] == "true"
             feed_url = feed_path_for_params(normalized_params)
+            source_health = source_health_payload(use_sample, len(events), normalized_params)
             self.send_json(
                 {
                     "ok": True,
                     "mode": "sample" if use_sample else "live",
                     "count": len(events),
                     "events": [event_to_dict(event) for event in events],
+                    "sourceHealth": source_health,
                     "feedUrl": feed_url,
                     "subscribeUrl": self.absolute_url(feed_url),
                     "downloadUrl": feed_url,
                     "sampleFeedUrl": published_feed_path("sample-ksc"),
                     "publishedFeedUrl": published_feed_path("football-germany"),
-                    "sourceNote": source_note(use_sample, len(events)),
+                    "sourceNote": source_health["detail"],
                 }
             )
         except (POCError, ValueError) as exc:
+            source_health = source_health_payload(False, 0, normalized_params, str(exc))
             self.send_json(
                 {
                     "ok": False,
                     "error": str(exc),
                     "events": [],
-                    "sourceNote": "Die Quelle konnte gerade nicht gelesen werden.",
+                    "sourceHealth": source_health,
+                    "sourceNote": source_health["detail"],
                 },
                 status=HTTPStatus.BAD_GATEWAY,
             )
@@ -716,20 +787,6 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
         scheme = forwarded_proto.split(",")[0].strip() if forwarded_proto else "http"
         host = self.headers.get("Host", "127.0.0.1:8765")
         return f"{scheme}://{host}{path}"
-
-
-def source_note(use_sample: bool, count: int) -> str:
-    if use_sample:
-        return "Sample-Modus: Diese Termine sind Testdaten und keine echten Spiele."
-    if count == 0:
-        return (
-            "OpenLigaDB liefert für diese Filter aktuell keine kommenden Termine. "
-            "Saisonende, Liga-Auswahl oder Filter können der Grund sein."
-        )
-    return (
-        "OpenLigaDB: freie Spielplan-/Ergebnisdaten für den POC. "
-        "Für garantierte Realtime-Daten braucht es später einen Provider mit SLA."
-    )
 
 
 def main() -> None:

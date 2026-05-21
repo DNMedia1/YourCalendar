@@ -4,6 +4,13 @@ const state = {
   qualityLegend: [],
   sportsCoverage: { europeSports: [], globalCombatSports: [], championships: [] },
   sourcePlan: { total: 0, active: 0, needsWork: 0, items: [] },
+  sourceHealth: {
+    status: "sample",
+    label: "Sample",
+    title: "Sample-Daten aktiv",
+    detail: "Sample-Modus nutzt Testdaten.",
+    hints: [],
+  },
   selectedCoverageId: "football",
   selectedCategoryId: "sports",
   events: [],
@@ -70,18 +77,29 @@ async function loadEvents() {
   try {
     const response = await fetch(`/api/events?${params().toString()}`);
     const payload = await response.json();
-    if (!payload.ok) throw new Error(payload.error || "Unbekannter Fehler");
+    if (!payload.ok) {
+      state.events = [];
+      applySourceHealth(payload.sourceHealth, "Quelle gestört");
+      updateFeedLinks();
+      renderEvents();
+      throw new Error(payload.error || payload.sourceNote || "Unbekannter Fehler");
+    }
     state.events = payload.events;
+    applySourceHealth(payload.sourceHealth, payload.mode === "sample" ? "Sample" : "OpenLigaDB");
     updateFeedLinks(payload);
-    elements.sourceStatus.textContent = payload.mode === "sample" ? "Sample" : "OpenLigaDB";
-    elements.sourceNote.textContent = payload.sourceNote;
-    elements.modeBadge.textContent = payload.mode === "sample" ? "Sample" : "Live";
     renderEvents();
   } catch (error) {
-    state.events = [];
+    if (!state.events.length && state.sourceHealth.status !== "error") {
+      state.events = [];
+      applySourceHealth({
+        status: "error",
+        label: "Quelle gestört",
+        title: "Abruf fehlgeschlagen",
+        detail: "Die Quelle konnte gerade nicht gelesen werden.",
+        hints: ["Netzwerk und lokalen Server prüfen."],
+      });
+    }
     updateFeedLinks();
-    elements.sourceStatus.textContent = "Fehler";
-    elements.sourceNote.textContent = error.message;
     renderEvents();
     toast(error.message, true);
   } finally {
@@ -101,6 +119,22 @@ function updateFeedLinks(payload = null) {
   const subscribeUrl = payload?.subscribeUrl || new URL(feedUrl, window.location.origin).toString();
   elements.downloadLink.href = feedUrl;
   elements.feedUrl.value = subscribeUrl;
+}
+
+function applySourceHealth(sourceHealth = null, fallbackLabel = "Bereit") {
+  const health = sourceHealth || {
+    status: "unknown",
+    label: fallbackLabel,
+    title: fallbackLabel,
+    detail: "Noch kein Quellenstatus verfügbar.",
+    hints: [],
+  };
+  state.sourceHealth = health;
+  elements.sourceStatus.textContent = health.label || fallbackLabel;
+  elements.sourceStatus.dataset.status = health.status || "unknown";
+  elements.sourceNote.textContent = health.detail || "";
+  elements.modeBadge.textContent = health.label || fallbackLabel;
+  elements.modeBadge.dataset.status = health.status || "unknown";
 }
 
 async function loadCalendars() {
@@ -321,7 +355,15 @@ function renderEvents() {
   elements.eventCount.textContent = String(state.events.length);
 
   if (!state.events.length) {
-    elements.eventList.innerHTML = `<div class="empty-state">Keine Spiele für diese Filter.</div>`;
+    const health = state.sourceHealth || {};
+    const hints = (health.hints || []).map((hint) => `<li>${escapeHtml(hint)}</li>`).join("");
+    elements.eventList.innerHTML = `
+      <div class="empty-state source-empty">
+        <strong>${escapeHtml(health.title || "Keine Spiele für diese Filter.")}</strong>
+        <p>${escapeHtml(health.detail || "Für diese Auswahl wurden keine Termine gefunden.")}</p>
+        ${hints ? `<ul>${hints}</ul>` : ""}
+      </div>
+    `;
     return;
   }
 
