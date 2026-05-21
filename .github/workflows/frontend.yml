@@ -1,4 +1,4 @@
-name: Frontend
+name: App Checks
 
 on:
   pull_request:
@@ -19,3 +19,32 @@ jobs:
           python-version: "3.12"
       - run: npm ci
       - run: npm test
+      - run: npm run build-storybook
+
+  python-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile Python modules
+        run: python3 -B -m py_compile web_app.py yourcalendar_poc.py
+      - name: Run API unit tests
+        run: python3 -B -m unittest discover -s tests -p 'test_*.py'
+      - name: Smoke test local web server
+        run: |
+          python3 -B web_app.py > /tmp/yourcalendar.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+
+          for attempt in {1..20}; do
+            if curl -fsS http://127.0.0.1:8765/ >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          curl -fsS "http://127.0.0.1:8765/api/events?sample=true&leagues=bl1,bl2,bl3&includePast=true" | grep '"ok": true'
+          curl -fsS "http://127.0.0.1:8765/feeds/current.ics?sample=true&leagues=bl1,bl2,bl3&includePast=true" | grep 'BEGIN:VCALENDAR'
+          curl -fsSI "http://127.0.0.1:8765/feeds/sample-ksc.ics" | grep 'text/calendar'

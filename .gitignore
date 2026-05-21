@@ -1,5 +1,6 @@
 # Git ignore rules for YourCalendar project
 .DS_Store
+*.swp
 __pycache__/
 *.pyc
 output/source-runs.json
