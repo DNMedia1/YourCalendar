@@ -6,10 +6,12 @@ import os
 import platform
 import subprocess
 from dataclasses import dataclass
+from datetime import datetime
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse
+from zoneinfo import ZoneInfo
 
 from yourcalendar_poc import (
     DEFAULT_OUTPUT,
@@ -42,6 +44,13 @@ class PublishedCalendar:
     name: str
     description: str
     source_label: str
+    source_type: str
+    source_type_label: str
+    quality_level: str
+    quality_label: str
+    update_policy: str
+    reliability_note: str
+    data_warnings: tuple[str, ...]
     params: dict[str, str]
     sample: bool = False
 
@@ -77,8 +86,27 @@ CALENDAR_CATEGORIES = (
     CalendarCategory(
         category_id="holidays",
         name="Ferien",
-        description="Ferien- und Feiertagskalender. Noch nicht befuellt.",
+        description="Ferien- und Feiertagskalender. Noch nicht befüllt.",
     ),
+)
+
+
+QUALITY_LEGEND = (
+    {
+        "id": "poc",
+        "label": "POC",
+        "description": "Frühe technische Validierung; noch keine produktive Datenzusage.",
+    },
+    {
+        "id": "community",
+        "label": "Community",
+        "description": "Freie oder Community-nahe Quelle ohne garantierte Echtzeit- oder SLA-Zusage.",
+    },
+    {
+        "id": "official",
+        "label": "Offiziell",
+        "description": "Direkte Partner- oder Rechteinhaberquelle mit klarer Aktualisierungszusage.",
+    },
 )
 
 
@@ -89,6 +117,17 @@ PUBLISHED_CALENDARS = {
         name=CALENDAR_NAME,
         description="Bundesliga, 2. Bundesliga, 3. Liga und DFB-Pokal aus OpenLigaDB.",
         source_label="OpenLigaDB, Community-Daten",
+        source_type="community",
+        source_type_label="Community-Quelle",
+        quality_level="community",
+        quality_label="Community, kein SLA",
+        update_policy="Der Feed lädt Spielplandaten beim Abruf neu aus OpenLigaDB.",
+        reliability_note="OpenLigaDB ist für den POC nützlich, aber kein garantierter Echtzeitprovider.",
+        data_warnings=(
+            "Anstoßzeiten und Verlegungen müssen später gegen eine verlässliche Quelle geprüft werden.",
+            "Saisonende oder fehlende Spieltage können zu leeren Feeds führen.",
+            "OpenLigaDB liefert keine SLA-Zusage für Vollständigkeit oder Aktualisierungslatenz.",
+        ),
         params={
             "sample": "false",
             "leagues": "bl1,bl2,bl3,dfb",
@@ -101,6 +140,16 @@ PUBLISHED_CALENDARS = {
         name=SAMPLE_CALENDAR_NAME,
         description="Sample-Feed mit klar markierten Testspielen.",
         source_label="YourCalendar Sample-Daten",
+        source_type="poc",
+        source_type_label="POC-Testdaten",
+        quality_level="poc",
+        quality_label="Sample, nicht echt",
+        update_policy="Statische Testdaten werden beim Feed-Abruf neu gerendert.",
+        reliability_note="Dieser Kalender dient nur zum Testen des Abo-Flows.",
+        data_warnings=(
+            "Alle Termine sind mit [SAMPLE] markiert.",
+            "Nicht für echte Spieltermine oder Erinnerungen verwenden.",
+        ),
         params={
             "sample": "true",
             "leagues": "bl1,bl2,bl3",
@@ -211,8 +260,20 @@ def render_feed(feed_id: str, query: str = "") -> tuple[str, bool]:
     return render_ics(load_events(params), calendar_name), is_sample
 
 
-def calendar_payload(calendar: PublishedCalendar, absolute_url) -> dict:
+def catalog_timestamp(now: datetime | None = None) -> datetime:
+    current = now or datetime.now(ZoneInfo(DEFAULT_TIMEZONE))
+    if current.tzinfo is None:
+        return current.replace(tzinfo=ZoneInfo(DEFAULT_TIMEZONE))
+    return current.astimezone(ZoneInfo(DEFAULT_TIMEZONE))
+
+
+def format_catalog_timestamp(value: datetime) -> str:
+    return value.strftime("%d.%m.%Y %H:%M %Z")
+
+
+def calendar_payload(calendar: PublishedCalendar, absolute_url, checked_at: datetime) -> dict:
     feed_url = published_feed_path(calendar.feed_id)
+    checked_label = format_catalog_timestamp(checked_at)
     return {
         "id": calendar.feed_id,
         "categoryId": calendar.category_id,
@@ -222,18 +283,30 @@ def calendar_payload(calendar: PublishedCalendar, absolute_url) -> dict:
         "sample": calendar.sample,
         "status": "sample" if calendar.sample else "available",
         "statusLabel": "Sample" if calendar.sample else "Verfügbar",
+        "quality": {
+            "level": calendar.quality_level,
+            "label": calendar.quality_label,
+            "sourceType": calendar.source_type,
+            "sourceTypeLabel": calendar.source_type_label,
+            "updatePolicy": calendar.update_policy,
+            "updatedAt": checked_at.isoformat(),
+            "updatedLabel": f"Katalogstand {checked_label}",
+            "reliabilityNote": calendar.reliability_note,
+            "warnings": list(calendar.data_warnings),
+        },
         "feedUrl": feed_url,
         "subscribeUrl": absolute_url(feed_url),
     }
 
 
-def calendar_catalog(absolute_url) -> list[dict]:
+def calendar_catalog(absolute_url, now: datetime | None = None) -> list[dict]:
+    checked_at = catalog_timestamp(now)
     calendars_by_category: dict[str, list[dict]] = {
         category.category_id: [] for category in CALENDAR_CATEGORIES
     }
     for calendar in PUBLISHED_CALENDARS.values():
         calendars_by_category.setdefault(calendar.category_id, []).append(
-            calendar_payload(calendar, absolute_url)
+            calendar_payload(calendar, absolute_url, checked_at)
         )
 
     return [
@@ -354,13 +427,22 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
             )
 
     def handle_calendars(self) -> None:
-        categories = calendar_catalog(self.absolute_url)
+        generated_at = catalog_timestamp()
+        categories = calendar_catalog(self.absolute_url, generated_at)
         calendars = [
             calendar
             for category in categories
             for calendar in category["calendars"]
         ]
-        self.send_json({"ok": True, "categories": categories, "calendars": calendars})
+        self.send_json(
+            {
+                "ok": True,
+                "generatedAt": generated_at.isoformat(),
+                "qualityLegend": list(QUALITY_LEGEND),
+                "categories": categories,
+                "calendars": calendars,
+            }
+        )
 
     def handle_leagues(self, query: str) -> None:
         params = parse_qs(query)

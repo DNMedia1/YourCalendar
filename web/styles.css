@@ -269,6 +269,31 @@ h3 { font-size: 18px; }
   overflow-x: auto;
 }
 
+.quality-legend {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfdfb;
+}
+
+.legend-item {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.legend-item strong {
+  font-size: 13px;
+}
+
+.legend-item span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
 .category-tab {
   display: inline-flex;
   align-items: center;
@@ -362,9 +387,19 @@ h3 { font-size: 18px; }
   font-weight: 850;
 }
 
-.status-pill.sample {
+.status-pill.poc {
   background: #fff6d8;
   color: #6f5206;
+}
+
+.status-pill.community {
+  background: #fff4e6;
+  color: #7a4600;
+}
+
+.status-pill.official {
+  background: #e7f5ed;
+  color: var(--green-strong);
 }
 
 .source-row {
@@ -382,6 +417,49 @@ h3 { font-size: 18px; }
 
 .source-row strong {
   overflow-wrap: anywhere;
+}
+
+.quality-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.quality-grid div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.quality-grid span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.quality-grid strong {
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.quality-grid small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.quality-notes {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0 0 0 18px;
+  color: var(--muted);
+  line-height: 1.35;
 }
 
 .calendar-actions {
@@ -586,6 +664,23 @@ h3 { font-size: 18px; }
   .calendar-catalog {
     grid-template-columns: 1fr;
     padding: 16px;
+  }
+
+  .quality-legend {
+    grid-template-columns: 1fr;
+    padding: 12px 16px;
+  }
+
+  .quality-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-card-main {
+    flex-direction: column;
+  }
+
+  .status-pill {
+    align-self: flex-start;
   }
 
   .category-tabs {

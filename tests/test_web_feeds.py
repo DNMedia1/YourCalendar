@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import unittest
+from datetime import datetime
 from urllib.parse import parse_qs, urlparse
+from zoneinfo import ZoneInfo
 
 from web_app import (
     CURRENT_FEED_ID,
@@ -60,8 +62,10 @@ class WebFeedTest(unittest.TestCase):
         self.assertEqual(feed_filename("../football"), "yourcalendar-football.ics")
 
     def test_calendar_catalog_groups_published_and_empty_categories(self) -> None:
-        categories = calendar_catalog(lambda path: f"https://example.test{path}")
+        checked_at = datetime(2026, 5, 21, 10, 15, tzinfo=ZoneInfo("Europe/Berlin"))
+        categories = calendar_catalog(lambda path: f"https://example.test{path}", checked_at)
         by_id = {category["id"]: category for category in categories}
+        first_sports_calendar = by_id["sports"]["calendars"][0]
 
         self.assertIn("sports", by_id)
         self.assertIn("politics", by_id)
@@ -70,8 +74,11 @@ class WebFeedTest(unittest.TestCase):
         self.assertIn("holidays", by_id)
         self.assertGreaterEqual(by_id["sports"]["calendarCount"], 1)
         self.assertEqual(by_id["politics"]["calendarCount"], 0)
-        self.assertEqual(by_id["sports"]["calendars"][0]["sourceLabel"], "OpenLigaDB, Community-Daten")
-        self.assertTrue(by_id["sports"]["calendars"][0]["subscribeUrl"].startswith("https://example.test/feeds/"))
+        self.assertEqual(first_sports_calendar["sourceLabel"], "OpenLigaDB, Community-Daten")
+        self.assertEqual(first_sports_calendar["quality"]["label"], "Community, kein SLA")
+        self.assertEqual(first_sports_calendar["quality"]["updatedAt"], "2026-05-21T10:15:00+02:00")
+        self.assertIn("kein garantierter Echtzeitprovider", first_sports_calendar["quality"]["reliabilityNote"])
+        self.assertTrue(first_sports_calendar["subscribeUrl"].startswith("https://example.test/feeds/"))
 
 
 if __name__ == "__main__":

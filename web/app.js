@@ -1,6 +1,7 @@
 const state = {
   sample: true,
   categories: [],
+  qualityLegend: [],
   selectedCategoryId: "sports",
   events: [],
   favorites: JSON.parse(localStorage.getItem("yourcalendar:favorites") || "[]"),
@@ -17,6 +18,7 @@ const elements = {
   downloadLink: $("downloadLink"),
   feedUrl: $("feedUrl"),
   catalogStatus: $("catalogStatus"),
+  qualityLegend: $("qualityLegend"),
   categoryTabs: $("categoryTabs"),
   calendarCatalog: $("calendarCatalog"),
   teamSearch: $("teamSearch"),
@@ -100,12 +102,14 @@ async function loadCalendars() {
     const payload = await response.json();
     if (!payload.ok) throw new Error(payload.error || "Kalender konnten nicht geladen werden.");
     state.categories = payload.categories || [];
+    state.qualityLegend = payload.qualityLegend || [];
     const selectedExists = state.categories.some((category) => category.id === state.selectedCategoryId);
     state.selectedCategoryId = selectedExists ? state.selectedCategoryId : state.categories[0]?.id || "";
     renderCatalog();
   } catch (error) {
     state.categories = [];
     elements.catalogStatus.textContent = "Fehler";
+    elements.qualityLegend.innerHTML = "";
     elements.categoryTabs.innerHTML = "";
     elements.calendarCatalog.innerHTML = `<div class="empty-state">Kalenderliste konnte nicht geladen werden.</div>`;
     toast(error.message, true);
@@ -115,8 +119,18 @@ async function loadCalendars() {
 function renderCatalog() {
   const total = state.categories.reduce((sum, category) => sum + category.calendarCount, 0);
   elements.catalogStatus.textContent = `${total} Kalender`;
+  renderQualityLegend();
   renderCategoryTabs();
   renderCalendarCatalog();
+}
+
+function renderQualityLegend() {
+  elements.qualityLegend.innerHTML = state.qualityLegend.map((item) => `
+    <div class="legend-item">
+      <strong>${escapeHtml(item.label)}</strong>
+      <span>${escapeHtml(item.description)}</span>
+    </div>
+  `).join("");
 }
 
 function renderCategoryTabs() {
@@ -162,13 +176,28 @@ function renderCalendarCatalog() {
           <span class="calendar-category">${escapeHtml(category.name)}</span>
           <h4>${escapeHtml(calendar.name)}</h4>
         </div>
-        <span class="status-pill${calendar.sample ? " sample" : ""}">${escapeHtml(calendar.statusLabel)}</span>
+        <span class="status-pill ${escapeAttribute(calendar.quality.level)}">${escapeHtml(calendar.quality.label)}</span>
       </div>
       <p>${escapeHtml(calendar.description)}</p>
       <div class="source-row">
         <span>Quelle</span>
         <strong>${escapeHtml(calendar.sourceLabel)}</strong>
       </div>
+      <div class="quality-grid">
+        <div>
+          <span>Aktualisierung</span>
+          <strong>${escapeHtml(calendar.quality.updatePolicy)}</strong>
+          <small>${escapeHtml(calendar.quality.updatedLabel)}</small>
+        </div>
+        <div>
+          <span>Einordnung</span>
+          <strong>${escapeHtml(calendar.quality.sourceTypeLabel)}</strong>
+          <small>${escapeHtml(calendar.quality.reliabilityNote)}</small>
+        </div>
+      </div>
+      <ul class="quality-notes">
+        ${calendar.quality.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}
+      </ul>
       <div class="calendar-actions">
         <a class="button primary" href="${escapeAttribute(calendar.feedUrl)}">ICS abonnieren</a>
         <button class="button secondary calendar-copy" type="button" data-url="${escapeAttribute(calendar.subscribeUrl)}">Link kopieren</button>
