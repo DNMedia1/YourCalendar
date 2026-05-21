@@ -31,6 +31,7 @@ from yourcalendar_poc import (
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
 OUTPUT_PATH = ROOT / DEFAULT_OUTPUT
+FEED_CACHE_DIR = ROOT / "output" / "feeds"
 CALENDAR_NAME = "YourCalendar German Football"
 SAMPLE_CALENDAR_NAME = "YourCalendar Sample Football"
 CURRENT_FEED_ID = "current"
@@ -155,6 +156,20 @@ def published_feed_path(feed_id: str) -> str:
 def feed_filename(feed_id: str) -> str:
     safe_id = "".join(char for char in feed_id if char.isalnum() or char in ("-", "_"))
     return f"yourcalendar-{safe_id or CURRENT_FEED_ID}.ics"
+
+
+def cached_feed_path(feed_id: str) -> Path:
+    return FEED_CACHE_DIR / feed_filename(feed_id)
+
+
+def load_cached_feed(feed_id: str, query: str = "") -> str | None:
+    if query or feed_id not in PUBLISHED_CALENDARS:
+        return None
+    path = cached_feed_path(feed_id)
+    if not path.exists():
+        return None
+    with path.open(encoding="utf-8", newline="") as handle:
+        return handle.read()
 
 
 def resolve_feed(feed_id: str, query: str) -> tuple[str, dict[str, list[str]], bool]:
@@ -490,7 +505,11 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
         self.send_json({"ok": True, "message": "Source deleted"})
 
     def serve_feed(self, feed_id: str, query: str, disposition: str, send_body: bool = True) -> None:
-        content, is_sample = render_feed(feed_id, query)
+        content = load_cached_feed(feed_id, query)
+        if content is None:
+            content, is_sample = render_feed(feed_id, query)
+        else:
+            is_sample = PUBLISHED_CALENDARS[feed_id].sample
         content_bytes = content.encode("utf-8")
         if is_sample and "[SAMPLE]" not in content:
             self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Sample feed is not clearly marked.")

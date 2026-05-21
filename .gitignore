@@ -4,6 +4,8 @@
 __pycache__/
 *.pyc
 output/source-runs.json
+output/import-runs.json
+output/feeds/
 sources.json
 .env
 node_modules/

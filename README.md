@@ -84,6 +84,17 @@ http://127.0.0.1:8765/feeds/football-germany.ics
 http://127.0.0.1:8765/feeds/sample-ksc.ics
 ```
 
+Published feeds can be refreshed by a repeatable import job:
+
+```bash
+python3 import_jobs.py
+```
+
+The job writes cached feed files to `output/feeds/` and appends run metadata to
+`output/import-runs.json`. If a source import fails, the previous cached feed
+file stays in place so existing subscription URLs can keep serving the last
+successful calendar.
+
 In production, set `YOURCALENDAR_PUBLIC_BASE_URL` to the deployed HTTPS origin
 so the UI exposes subscription URLs such as:
 
