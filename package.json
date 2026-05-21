@@ -1,0 +1,28 @@
+{
+  "name": "yourcalendar-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:css": "tailwindcss -i ./web/tailwind.input.css -o ./web/tailwind.css --minify",
+    "watch:css": "tailwindcss -i ./web/tailwind.input.css -o ./web/tailwind.css --watch",
+    "test": "npm run build:css && node --test tests/ui.test.mjs tests/a11y.test.mjs",
+    "test:ui": "node --test tests/ui.test.mjs",
+    "test:a11y": "node --test tests/a11y.test.mjs",
+    "storybook": "HOME=.storybook-home STORYBOOK_DISABLE_TELEMETRY=1 storybook dev -p 6006",
+    "build-storybook": "HOME=.storybook-home STORYBOOK_DISABLE_TELEMETRY=1 storybook build"
+  },
+  "devDependencies": {
+    "@storybook/html-vite": "^8.6.14",
+    "autoprefixer": "^10.4.21",
+    "axe-core": "^4.11.4",
+    "jsdom": "^29.1.1",
+    "postcss": "^8.5.6",
+    "storybook": "^8.6.14",
+    "tailwindcss": "^3.4.17"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-darwin-arm64": "^4.60.4",
+    "@rollup/rollup-linux-x64-gnu": "^4.60.4"
+  }
+}

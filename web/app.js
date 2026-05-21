@@ -2,6 +2,7 @@ const state = {
   sample: true,
   events: [],
   favorites: JSON.parse(localStorage.getItem("yourcalendar:favorites") || "[]"),
+  theme: localStorage.getItem("yourcalendar:theme") || "system",
 };
 
 const $ = (id) => document.getElementById(id);
@@ -10,6 +11,7 @@ const elements = {
   liveMode: $("liveMode"),
   sampleMode: $("sampleMode"),
   refreshButton: $("refreshButton"),
+  themeToggle: $("themeToggle"),
   appleButton: $("appleButton"),
   copyFeedButton: $("copyFeedButton"),
   downloadLink: $("downloadLink"),
@@ -25,6 +27,8 @@ const elements = {
   modeBadge: $("modeBadge"),
 };
 
+const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+
 function selectedLeagues() {
   return [...document.querySelectorAll(".league:checked")].map((input) => input.value);
 }
@@ -38,7 +42,33 @@ function setMode(sample) {
   state.sample = sample;
   elements.sampleMode.classList.toggle("active", sample);
   elements.liveMode.classList.toggle("active", !sample);
+  elements.sampleMode.setAttribute("aria-pressed", String(sample));
+  elements.liveMode.setAttribute("aria-pressed", String(!sample));
   loadEvents();
+}
+
+function effectiveTheme() {
+  if (state.theme === "system") return systemDark.matches ? "dark" : "light";
+  return state.theme;
+}
+
+function applyTheme(withTransition = false) {
+  const theme = effectiveTheme();
+  if (withTransition) {
+    document.documentElement.classList.add("theme-transition");
+    window.setTimeout(() => document.documentElement.classList.remove("theme-transition"), 260);
+  }
+  document.documentElement.dataset.theme = theme;
+  const isDark = theme === "dark";
+  elements.themeToggle.setAttribute("aria-pressed", String(isDark));
+  elements.themeToggle.setAttribute("aria-label", isDark ? "Light Mode aktivieren" : "Dark Mode aktivieren");
+  elements.themeToggle.querySelector(".theme-toggle-label").textContent = isDark ? "Light" : "Dark";
+}
+
+function toggleTheme() {
+  state.theme = effectiveTheme() === "dark" ? "light" : "dark";
+  localStorage.setItem("yourcalendar:theme", state.theme);
+  applyTheme(true);
 }
 
 function params() {
@@ -105,20 +135,21 @@ function renderEvents() {
   elements.eventList.innerHTML = visibleEvents.map((event) => {
     const homeFav = state.favorites.includes(event.homeTeam);
     const awayFav = state.favorites.includes(event.awayTeam);
+    const leagueLabel = String(event.league || "sample").toUpperCase();
     return `
-      <article class="event-card">
+      <article class="event-card" tabindex="0">
         <div class="date-block">
-          <strong>${event.dateLabel}</strong>
-          <span>${event.timeLabel}</span>
+          <strong>${escapeHtml(event.dateLabel)}</strong>
+          <span>${escapeHtml(event.timeLabel)}</span>
         </div>
         <div class="event-main">
-          <strong>${event.title}</strong>
-          <div class="event-meta">${event.leagueName}${event.location ? ` · ${event.location}` : ""}</div>
+          <strong>${escapeHtml(event.title)}</strong>
+          <div class="event-meta">${escapeHtml(event.leagueName)}${event.location ? ` · ${escapeHtml(event.location)}` : ""}</div>
         </div>
         <div class="event-actions">
-          <button class="star-button" type="button" data-team="${escapeAttribute(event.homeTeam)}" title="${homeFav ? "Favorit entfernen" : "Heimteam favorisieren"}">${homeFav ? "★" : "☆"}</button>
-          <button class="star-button" type="button" data-team="${escapeAttribute(event.awayTeam)}" title="${awayFav ? "Favorit entfernen" : "Auswärtsteam favorisieren"}">${awayFav ? "★" : "☆"}</button>
-          <span class="tag">${event.league.toUpperCase()}</span>
+          <button class="star-button${homeFav ? " is-active" : ""}" type="button" data-team="${escapeAttribute(event.homeTeam)}" aria-pressed="${homeFav}" aria-label="${homeFav ? "Heimteam aus Favoriten entfernen" : "Heimteam favorisieren"}">${homeFav ? "★" : "☆"}</button>
+          <button class="star-button${awayFav ? " is-active" : ""}" type="button" data-team="${escapeAttribute(event.awayTeam)}" aria-pressed="${awayFav}" aria-label="${awayFav ? "Auswärtsteam aus Favoriten entfernen" : "Auswärtsteam favorisieren"}">${awayFav ? "★" : "☆"}</button>
+          <span class="tag" data-league="${escapeAttribute(event.league)}">${escapeHtml(leagueLabel)}</span>
         </div>
       </article>
     `;
@@ -136,7 +167,7 @@ function renderFavorites() {
     return;
   }
   elements.favorites.innerHTML = state.favorites.map((team) => `
-    <button class="favorite-pill" type="button" data-team="${escapeAttribute(team)}">${team} ×</button>
+    <button class="favorite-pill" type="button" data-team="${escapeAttribute(team)}" aria-label="${escapeAttribute(team)} aus Favoriten entfernen">${escapeHtml(team)} ×</button>
   `).join("");
   document.querySelectorAll(".favorite-pill").forEach((button) => {
     button.addEventListener("click", () => toggleFavorite(button.dataset.team));
@@ -156,6 +187,15 @@ function toggleFavorite(team) {
 
 function escapeAttribute(value) {
   return String(value || "").replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 async function openAppleCalendar() {
@@ -190,6 +230,7 @@ function toast(message, isError = false) {
 elements.liveMode.addEventListener("click", () => setMode(false));
 elements.sampleMode.addEventListener("click", () => setMode(true));
 elements.refreshButton.addEventListener("click", loadEvents);
+elements.themeToggle.addEventListener("click", toggleTheme);
 elements.appleButton.addEventListener("click", openAppleCalendar);
 elements.copyFeedButton.addEventListener("click", copyFeedLink);
 elements.teamSearch.addEventListener("input", () => {
@@ -203,7 +244,11 @@ $("clearFavorites").addEventListener("click", () => {
   saveFavorites();
   loadEvents();
 });
+systemDark.addEventListener("change", () => {
+  if (state.theme === "system") applyTheme(true);
+});
 
+applyTheme();
 renderFavorites();
 updateFeedLinks();
 loadEvents();
