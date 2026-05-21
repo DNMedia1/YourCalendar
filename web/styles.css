@@ -407,6 +407,135 @@ h3 { font-size: 18px; }
   line-height: 1.35;
 }
 
+.source-plan-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfdfb;
+}
+
+.source-plan-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.source-plan-head h4 {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.source-plan-head > span {
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #eef4ef;
+  color: var(--green-strong);
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.source-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.source-plan-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.source-plan-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.source-plan-card-head div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.source-plan-card-head span,
+.source-plan-columns span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.source-plan-card-head strong {
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.source-plan-card-head em {
+  flex: 0 0 auto;
+  min-height: 26px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #eef4ef;
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.source-plan-card-head em.active {
+  background: #e7f5ed;
+  color: var(--green-strong);
+}
+
+.source-plan-card-head em.research {
+  background: #fff4e6;
+  color: #7a4600;
+}
+
+.source-plan-card-head em.design {
+  background: #fff6d8;
+  color: #6f5206;
+}
+
+.source-plan-card p {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.source-plan-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.source-plan-columns div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.source-plan-columns ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 17px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
 .category-tab {
   display: inline-flex;
   align-items: center;
@@ -800,8 +929,19 @@ h3 { font-size: 18px; }
     padding: 14px 16px;
   }
 
-  .coverage-head {
+  .source-plan-panel {
+    padding: 14px 16px;
+  }
+
+  .coverage-head,
+  .source-plan-head,
+  .source-plan-card-head {
     flex-direction: column;
+  }
+
+  .source-plan-grid,
+  .source-plan-columns {
+    grid-template-columns: 1fr;
   }
 
   .quality-grid {

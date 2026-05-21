@@ -3,6 +3,7 @@ const state = {
   categories: [],
   qualityLegend: [],
   sportsCoverage: { europeSports: [], globalCombatSports: [], championships: [] },
+  sourcePlan: { total: 0, active: 0, needsWork: 0, items: [] },
   selectedCoverageId: "football",
   selectedCategoryId: "sports",
   events: [],
@@ -23,6 +24,8 @@ const elements = {
   qualityLegend: $("qualityLegend"),
   sportsCoverage: $("sportsCoverage"),
   coverageDetail: $("coverageDetail"),
+  sourcePlanStatus: $("sourcePlanStatus"),
+  sourcePlan: $("sourcePlan"),
   categoryTabs: $("categoryTabs"),
   calendarCatalog: $("calendarCatalog"),
   teamSearch: $("teamSearch"),
@@ -108,6 +111,7 @@ async function loadCalendars() {
     state.categories = payload.categories || [];
     state.qualityLegend = payload.qualityLegend || [];
     state.sportsCoverage = payload.sportsCoverage || { europeSports: [], globalCombatSports: [], championships: [] };
+    state.sourcePlan = payload.sourcePlan || { total: 0, active: 0, needsWork: 0, items: [] };
     const selectedExists = state.categories.some((category) => category.id === state.selectedCategoryId);
     state.selectedCategoryId = selectedExists ? state.selectedCategoryId : state.categories[0]?.id || "";
     if (!findCoverageOption(state.selectedCoverageId)) {
@@ -120,6 +124,8 @@ async function loadCalendars() {
     elements.qualityLegend.innerHTML = "";
     elements.sportsCoverage.innerHTML = "";
     elements.coverageDetail.innerHTML = "";
+    elements.sourcePlanStatus.textContent = "Fehler";
+    elements.sourcePlan.innerHTML = "";
     elements.categoryTabs.innerHTML = "";
     elements.calendarCatalog.innerHTML = `<div class="empty-state">Kalenderliste konnte nicht geladen werden.</div>`;
     toast(error.message, true);
@@ -131,6 +137,7 @@ function renderCatalog() {
   elements.catalogStatus.textContent = `${total} Kalender`;
   renderQualityLegend();
   renderSportsCoverage();
+  renderSourcePlan();
   renderCategoryTabs();
   renderCalendarCatalog();
 }
@@ -213,6 +220,38 @@ function renderSportsCoverage() {
     <p>${escapeHtml(selected.description)}</p>
     <em>${escapeHtml(selected.statusLabel)} · ${escapeHtml(selected.sourceNote)}</em>
   `;
+}
+
+function renderSourcePlan() {
+  const items = state.sourcePlan.items || [];
+  elements.sourcePlanStatus.textContent = `${state.sourcePlan.needsWork || 0} offen · ${state.sourcePlan.active || 0} aktiv`;
+  if (!items.length) {
+    elements.sourcePlan.innerHTML = `<div class="empty-state">Noch keine Provider-Planung verfügbar.</div>`;
+    return;
+  }
+
+  elements.sourcePlan.innerHTML = items.map((item) => `
+    <article class="source-plan-card">
+      <div class="source-plan-card-head">
+        <div>
+          <span>${escapeHtml(item.scope)} · ${escapeHtml(item.priority)}</span>
+          <strong>${escapeHtml(item.title)}</strong>
+        </div>
+        <em class="${escapeAttribute(item.status)}">${escapeHtml(item.statusLabel)}</em>
+      </div>
+      <p>${escapeHtml(item.summary)}</p>
+      <div class="source-plan-columns">
+        <div>
+          <span>Blocker</span>
+          <ul>${item.blockers.map((blocker) => `<li>${escapeHtml(blocker)}</li>`).join("")}</ul>
+        </div>
+        <div>
+          <span>Nächste Schritte</span>
+          <ul>${item.nextSteps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ul>
+        </div>
+      </div>
+    </article>
+  `).join("");
 }
 
 function renderCalendarCatalog() {

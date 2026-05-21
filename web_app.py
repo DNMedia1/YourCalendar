@@ -26,6 +26,7 @@ from yourcalendar_poc import (
     render_ics,
     write_ics,
 )
+from yourcalendar_sources import source_plan_payload
 
 
 ROOT = Path(__file__).resolve().parent
@@ -619,6 +620,7 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
                 "generatedAt": generated_at.isoformat(),
                 "qualityLegend": list(QUALITY_LEGEND),
                 "sportsCoverage": sports_coverage_payload(),
+                "sourcePlan": source_plan_payload(),
                 "categories": categories,
                 "calendars": calendars,
             }

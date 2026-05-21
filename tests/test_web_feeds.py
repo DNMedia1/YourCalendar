@@ -15,6 +15,7 @@ from web_app import (
     resolve_feed,
     sports_coverage_payload,
 )
+from yourcalendar_sources import source_plan_payload
 
 
 class WebFeedTest(unittest.TestCase):
@@ -107,6 +108,20 @@ class WebFeedTest(unittest.TestCase):
         )
         self.assertIn("Fußball", {item["name"] for item in coverage["europeSports"]})
         self.assertIn("MMA", {item["name"] for item in coverage["globalCombatSports"]})
+
+    def test_source_plan_exposes_provider_integration_tracks(self) -> None:
+        source_plan = source_plan_payload()
+        by_id = {item["id"]: item for item in source_plan["items"]}
+
+        self.assertEqual(source_plan["total"], len(source_plan["items"]))
+        self.assertEqual(source_plan["needsWork"], source_plan["total"] - source_plan["active"])
+        self.assertIn("openligadb-football-poc", by_id)
+        self.assertIn("europe-sports-provider", by_id)
+        self.assertIn("global-combat-provider", by_id)
+        self.assertIn("championship-detector", by_id)
+        self.assertIn("football-germany", by_id["openligadb-football-poc"]["calendarIds"])
+        self.assertIn("global-combat-events", by_id["global-combat-provider"]["calendarIds"])
+        self.assertTrue(by_id["championship-detector"]["acceptanceCriteria"])
 
 
 if __name__ == "__main__":
