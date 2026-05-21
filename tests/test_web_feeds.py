@@ -13,6 +13,7 @@ from web_app import (
     normalize_feed_params,
     render_feed,
     resolve_feed,
+    sports_coverage_payload,
 )
 
 
@@ -73,12 +74,39 @@ class WebFeedTest(unittest.TestCase):
         self.assertIn("culture", by_id)
         self.assertIn("holidays", by_id)
         self.assertGreaterEqual(by_id["sports"]["calendarCount"], 1)
+        self.assertIn("combat", by_id)
+        self.assertGreaterEqual(by_id["combat"]["calendarCount"], 1)
         self.assertEqual(by_id["politics"]["calendarCount"], 0)
         self.assertEqual(first_sports_calendar["sourceLabel"], "OpenLigaDB, Community-Daten")
         self.assertEqual(first_sports_calendar["quality"]["label"], "Community, kein SLA")
         self.assertEqual(first_sports_calendar["quality"]["updatedAt"], "2026-05-21T10:15:00+02:00")
         self.assertIn("kein garantierter Echtzeitprovider", first_sports_calendar["quality"]["reliabilityNote"])
         self.assertTrue(first_sports_calendar["subscribeUrl"].startswith("https://example.test/feeds/"))
+
+        combat_calendar = by_id["combat"]["calendars"][0]
+        self.assertFalse(combat_calendar["hasFeed"])
+        self.assertIsNone(combat_calendar["feedUrl"])
+        self.assertEqual(combat_calendar["quality"]["label"], "Provider nötig")
+        self.assertIn("Kampfsportveranstaltungen", combat_calendar["quality"]["reliabilityNote"])
+
+        championship_calendar = [
+            calendar for calendar in by_id["sports"]["calendars"]
+            if calendar["id"] == "world-europe-championships"
+        ][0]
+        self.assertFalse(championship_calendar["hasFeed"])
+        self.assertIn("WM & EM", championship_calendar["name"])
+
+    def test_sports_coverage_exposes_europe_combat_and_championships(self) -> None:
+        coverage = sports_coverage_payload()
+
+        self.assertGreaterEqual(len(coverage["europeSports"]), 20)
+        self.assertGreaterEqual(len(coverage["globalCombatSports"]), 10)
+        self.assertEqual(
+            {item["id"] for item in coverage["championships"]},
+            {"world-championships", "european-championships"},
+        )
+        self.assertIn("Fußball", {item["name"] for item in coverage["europeSports"]})
+        self.assertIn("MMA", {item["name"] for item in coverage["globalCombatSports"]})
 
 
 if __name__ == "__main__":

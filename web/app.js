@@ -2,6 +2,8 @@ const state = {
   sample: true,
   categories: [],
   qualityLegend: [],
+  sportsCoverage: { europeSports: [], globalCombatSports: [], championships: [] },
+  selectedCoverageId: "football",
   selectedCategoryId: "sports",
   events: [],
   favorites: JSON.parse(localStorage.getItem("yourcalendar:favorites") || "[]"),
@@ -19,6 +21,8 @@ const elements = {
   feedUrl: $("feedUrl"),
   catalogStatus: $("catalogStatus"),
   qualityLegend: $("qualityLegend"),
+  sportsCoverage: $("sportsCoverage"),
+  coverageDetail: $("coverageDetail"),
   categoryTabs: $("categoryTabs"),
   calendarCatalog: $("calendarCatalog"),
   teamSearch: $("teamSearch"),
@@ -103,13 +107,19 @@ async function loadCalendars() {
     if (!payload.ok) throw new Error(payload.error || "Kalender konnten nicht geladen werden.");
     state.categories = payload.categories || [];
     state.qualityLegend = payload.qualityLegend || [];
+    state.sportsCoverage = payload.sportsCoverage || { europeSports: [], globalCombatSports: [], championships: [] };
     const selectedExists = state.categories.some((category) => category.id === state.selectedCategoryId);
     state.selectedCategoryId = selectedExists ? state.selectedCategoryId : state.categories[0]?.id || "";
+    if (!findCoverageOption(state.selectedCoverageId)) {
+      state.selectedCoverageId = allCoverageOptions()[0]?.id || "";
+    }
     renderCatalog();
   } catch (error) {
     state.categories = [];
     elements.catalogStatus.textContent = "Fehler";
     elements.qualityLegend.innerHTML = "";
+    elements.sportsCoverage.innerHTML = "";
+    elements.coverageDetail.innerHTML = "";
     elements.categoryTabs.innerHTML = "";
     elements.calendarCatalog.innerHTML = `<div class="empty-state">Kalenderliste konnte nicht geladen werden.</div>`;
     toast(error.message, true);
@@ -120,6 +130,7 @@ function renderCatalog() {
   const total = state.categories.reduce((sum, category) => sum + category.calendarCount, 0);
   elements.catalogStatus.textContent = `${total} Kalender`;
   renderQualityLegend();
+  renderSportsCoverage();
   renderCategoryTabs();
   renderCalendarCatalog();
 }
@@ -149,6 +160,59 @@ function renderCategoryTabs() {
       renderCatalog();
     });
   });
+}
+
+function coverageGroups() {
+  return [
+    { title: "Europa Sportarten", items: state.sportsCoverage.europeSports || [] },
+    { title: "Kampfsport weltweit", items: state.sportsCoverage.globalCombatSports || [] },
+    { title: "WM & EM", items: state.sportsCoverage.championships || [] },
+  ];
+}
+
+function allCoverageOptions() {
+  return coverageGroups().flatMap((group) => group.items);
+}
+
+function findCoverageOption(id) {
+  return allCoverageOptions().find((option) => option.id === id);
+}
+
+function renderSportsCoverage() {
+  const groups = coverageGroups();
+  elements.sportsCoverage.innerHTML = groups.map((group) => `
+    <div class="coverage-group">
+      <strong>${escapeHtml(group.title)}</strong>
+      <div class="coverage-options">
+        ${group.items.map((item) => `
+          <button class="coverage-chip${item.id === state.selectedCoverageId ? " active" : ""}" type="button" data-coverage="${escapeAttribute(item.id)}">
+            ${escapeHtml(item.name)}
+          </button>
+        `).join("")}
+      </div>
+    </div>
+  `).join("");
+
+  document.querySelectorAll(".coverage-chip").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedCoverageId = button.dataset.coverage;
+      renderSportsCoverage();
+    });
+  });
+
+  const selected = findCoverageOption(state.selectedCoverageId);
+  if (!selected) {
+    elements.coverageDetail.innerHTML = "";
+    return;
+  }
+  elements.coverageDetail.innerHTML = `
+    <div>
+      <span>${escapeHtml(selected.scope)} · ${escapeHtml(selected.group)}</span>
+      <strong>${escapeHtml(selected.name)}</strong>
+    </div>
+    <p>${escapeHtml(selected.description)}</p>
+    <em>${escapeHtml(selected.statusLabel)} · ${escapeHtml(selected.sourceNote)}</em>
+  `;
 }
 
 function renderCalendarCatalog() {
@@ -199,8 +263,12 @@ function renderCalendarCatalog() {
         ${calendar.quality.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}
       </ul>
       <div class="calendar-actions">
-        <a class="button primary" href="${escapeAttribute(calendar.feedUrl)}">ICS abonnieren</a>
-        <button class="button secondary calendar-copy" type="button" data-url="${escapeAttribute(calendar.subscribeUrl)}">Link kopieren</button>
+        ${calendar.hasFeed
+          ? `<a class="button primary" href="${escapeAttribute(calendar.feedUrl)}">ICS abonnieren</a>
+             <button class="button secondary calendar-copy" type="button" data-url="${escapeAttribute(calendar.subscribeUrl)}">Link kopieren</button>`
+          : `<button class="button disabled" type="button" disabled>Provider nötig</button>
+             <span class="action-note">Noch kein echter Event-Feed.</span>`
+        }
       </div>
     </article>
   `).join("");

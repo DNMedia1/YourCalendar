@@ -51,7 +51,7 @@ class PublishedCalendar:
     update_policy: str
     reliability_note: str
     data_warnings: tuple[str, ...]
-    params: dict[str, str]
+    params: dict[str, str] | None
     sample: bool = False
 
 
@@ -62,11 +62,27 @@ class CalendarCategory:
     description: str
 
 
+@dataclass(frozen=True)
+class SportCoverageOption:
+    option_id: str
+    name: str
+    scope: str
+    group: str
+    status_label: str
+    description: str
+    source_note: str
+
+
 CALENDAR_CATEGORIES = (
     CalendarCategory(
         category_id="sports",
         name="Sport",
         description="Spielpläne und Wettbewerbe, die als abonnierbare Kalender bereitstehen.",
+    ),
+    CalendarCategory(
+        category_id="combat",
+        name="Kampfsport",
+        description="Weltweite Kampfsportveranstaltungen. Datenanbieter ist noch nicht angebunden.",
     ),
     CalendarCategory(
         category_id="politics",
@@ -107,6 +123,61 @@ QUALITY_LEGEND = (
         "label": "Offiziell",
         "description": "Direkte Partner- oder Rechteinhaberquelle mit klarer Aktualisierungszusage.",
     },
+    {
+        "id": "planned",
+        "label": "Geplant",
+        "description": "Im Produkt auswählbar, aber noch ohne produktive Datenquelle.",
+    },
+)
+
+
+EUROPEAN_SPORTS = (
+    SportCoverageOption("football", "Fußball", "Europa", "Mannschaftssport", "Teilweise live", "Deutschland ist im POC über OpenLigaDB angebunden.", "OpenLigaDB deckt aktuell nur ausgewählte deutsche Fußballwettbewerbe ab."),
+    SportCoverageOption("basketball", "Basketball", "Europa", "Mannschaftssport", "Provider nötig", "Europäische Ligen, Cups und Nationalteam-Termine.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("handball", "Handball", "Europa", "Mannschaftssport", "Provider nötig", "Club- und Verbandstermine in europäischen Wettbewerben.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("ice-hockey", "Eishockey", "Europa", "Mannschaftssport", "Provider nötig", "Nationale Ligen, Champions Hockey League und Turniere.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("tennis", "Tennis", "Europa", "Einzelsport", "Provider nötig", "ATP-, WTA-, Challenger- und ITF-Termine mit Europa-Fokus.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("volleyball", "Volleyball", "Europa", "Mannschaftssport", "Provider nötig", "Liga-, Cup- und Nationalteam-Termine.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("rugby", "Rugby", "Europa", "Mannschaftssport", "Provider nötig", "Union, League und europäische Wettbewerbe.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("cricket", "Cricket", "Europa", "Mannschaftssport", "Provider nötig", "Internationale und nationale Cricket-Termine in Europa.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("cycling", "Radsport", "Europa", "Ausdauer", "Provider nötig", "Straße, Bahn, Cyclocross und große Rundfahrten.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("motorsport", "Motorsport", "Europa", "Motorsport", "Provider nötig", "Formel-, Rallye-, Touring- und Motorradserien.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("athletics", "Leichtathletik", "Europa", "Olympisch", "Provider nötig", "Meetings, Meisterschaften und Straßenläufe.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("swimming", "Schwimmen", "Europa", "Olympisch", "Provider nötig", "Meetings, Meisterschaften und offene Wasser-Termine.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("winter-sports", "Wintersport", "Europa", "Winter", "Provider nötig", "Ski alpin, Langlauf, Biathlon, Bob, Rodeln und Eissport.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("field-hockey", "Hockey", "Europa", "Mannschaftssport", "Provider nötig", "Feld- und Hallenhockey-Termine.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("table-tennis", "Tischtennis", "Europa", "Rückschlag", "Provider nötig", "Ligen, Cups und Turniere.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("badminton", "Badminton", "Europa", "Rückschlag", "Provider nötig", "Turniere, Ligen und internationale Wettbewerbe.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("golf", "Golf", "Europa", "Einzelsport", "Provider nötig", "Tour-Events und nationale Turniere.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("darts", "Darts", "Europa", "Ziel-/Präzision", "Provider nötig", "Tour, Majors und regionale Events.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("snooker", "Snooker", "Europa", "Ziel-/Präzision", "Provider nötig", "Turniere und Tour-Termine.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("futsal", "Futsal", "Europa", "Mannschaftssport", "Provider nötig", "Nationale und internationale Futsal-Termine.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("water-polo", "Wasserball", "Europa", "Mannschaftssport", "Provider nötig", "Ligen, Cups und Nationalteam-Turniere.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("rowing", "Rudern", "Europa", "Ausdauer", "Provider nötig", "Regatten und Meisterschaften.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("sailing", "Segeln", "Europa", "Wasser", "Provider nötig", "Regatten, Serien und Meisterschaften.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("triathlon", "Triathlon", "Europa", "Ausdauer", "Provider nötig", "Rennen, Serien und Meisterschaften.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("gymnastics", "Turnen", "Europa", "Olympisch", "Provider nötig", "Turniere, Cups und Meisterschaften.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("horse-sports", "Pferdesport", "Europa", "Reitsport", "Provider nötig", "Springen, Dressur, Vielseitigkeit und Rennen.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("american-football", "American Football", "Europa", "Mannschaftssport", "Provider nötig", "ELF, nationale Ligen und internationale Termine.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("esports", "E-Sports", "Europa", "Digital", "Provider nötig", "Turniere und Liga-Termine mit Europa-Fokus.", "Noch keine verlässliche Quelle angebunden."),
+    SportCoverageOption("other-european-sports", "Weitere Sportarten", "Europa", "Offen", "Provider nötig", "Fallback-Auswahl für Sportarten, die noch nicht als eigener Chip geführt sind.", "Die finale Sportartenliste muss aus der angebundenen Provider-Taxonomie kommen."),
+)
+
+
+GLOBAL_COMBAT_SPORTS = (
+    SportCoverageOption("mma", "MMA", "Weltweit", "Kampfsport", "Provider nötig", "Organisationen, Fight Nights, Titelkämpfe und regionale Shows.", "Noch keine globale, verlässliche Quelle angebunden."),
+    SportCoverageOption("boxing", "Boxen", "Weltweit", "Kampfsport", "Provider nötig", "Profikämpfe, Titelkämpfe, Amateurturniere und Fight Cards.", "Noch keine globale, verlässliche Quelle angebunden."),
+    SportCoverageOption("kickboxing", "Kickboxen", "Weltweit", "Kampfsport", "Provider nötig", "Kickboxing-Events und internationale Shows.", "Noch keine globale, verlässliche Quelle angebunden."),
+    SportCoverageOption("muay-thai", "Muay Thai", "Weltweit", "Kampfsport", "Provider nötig", "Stadion-Events, internationale Shows und Titelkämpfe.", "Noch keine globale, verlässliche Quelle angebunden."),
+    SportCoverageOption("bjj-grappling", "BJJ & Grappling", "Weltweit", "Kampfsport", "Provider nötig", "Turniere, Superfights und Submission-Grappling-Events.", "Noch keine globale, verlässliche Quelle angebunden."),
+    SportCoverageOption("wrestling", "Ringen", "Weltweit", "Kampfsport", "Provider nötig", "Freistil, griechisch-römisch, Turniere und Meisterschaften.", "Noch keine globale, verlässliche Quelle angebunden."),
+    SportCoverageOption("judo", "Judo", "Weltweit", "Kampfsport", "Provider nötig", "Grand Slams, Cups, nationale und internationale Meisterschaften.", "Noch keine globale, verlässliche Quelle angebunden."),
+    SportCoverageOption("karate", "Karate", "Weltweit", "Kampfsport", "Provider nötig", "Turniere, Serien und Meisterschaften.", "Noch keine globale, verlässliche Quelle angebunden."),
+    SportCoverageOption("taekwondo", "Taekwondo", "Weltweit", "Kampfsport", "Provider nötig", "Turniere, Serien und Meisterschaften.", "Noch keine globale, verlässliche Quelle angebunden."),
+    SportCoverageOption("sambo", "Sambo", "Weltweit", "Kampfsport", "Provider nötig", "Combat Sambo und Sport Sambo Events.", "Noch keine globale, verlässliche Quelle angebunden."),
+    SportCoverageOption("sumo", "Sumo", "Weltweit", "Kampfsport", "Provider nötig", "Basho, internationale Turniere und Verbandsveranstaltungen.", "Noch keine globale, verlässliche Quelle angebunden."),
+    SportCoverageOption("bare-knuckle", "Bare Knuckle", "Weltweit", "Kampfsport", "Provider nötig", "Fight Cards und regionale Shows.", "Noch keine globale, verlässliche Quelle angebunden."),
+    SportCoverageOption("other-combat-sports", "Weitere Kampfsportarten", "Weltweit", "Kampfsport", "Provider nötig", "Fallback-Auswahl für weitere Kampfsportarten und regionale Eventformen.", "Die finale Kampfsportliste muss aus einer belastbaren globalen Datenquelle kommen."),
 )
 
 
@@ -156,6 +227,63 @@ PUBLISHED_CALENDARS = {
             "includePast": "true",
         },
         sample=True,
+    ),
+    "europe-all-sports": PublishedCalendar(
+        feed_id="europe-all-sports",
+        category_id="sports",
+        name="Europa Sportarten",
+        description="Auswahl aller geplanten Sportarten mit Europa-Fokus. Feeds werden nach Datenquellen-Anbindung freigeschaltet.",
+        source_label="Provider noch nicht angebunden",
+        source_type="planned",
+        source_type_label="Datenquelle offen",
+        quality_level="planned",
+        quality_label="Provider nötig",
+        update_policy="Noch kein produktiver Importjob. Auswahl ist als Produktstruktur vorbereitet.",
+        reliability_note="Sportarten sind auswählbar, aber ohne angebundene Quelle werden noch keine echten Termine angezeigt.",
+        data_warnings=(
+            "Keine Live-Termine ohne verifizierte Datenquelle.",
+            "Ligen, Verbände und Rechte müssen je Sportart geklärt werden.",
+            "Europaweite Vollständigkeit ist erst nach Provider- und Quellenprüfung belastbar.",
+        ),
+        params=None,
+    ),
+    "world-europe-championships": PublishedCalendar(
+        feed_id="world-europe-championships",
+        category_id="sports",
+        name="WM & EM laufende Turniere",
+        description="Welt- und Europameisterschaften sollen sichtbar werden, sobald sie laufen oder kurz bevorstehen.",
+        source_label="Meisterschafts-Provider noch nicht angebunden",
+        source_type="planned",
+        source_type_label="Datenquelle offen",
+        quality_level="planned",
+        quality_label="Provider nötig",
+        update_policy="Geplant ist ein Import, der laufende und bevorstehende WM-/EM-Turniere erkennt.",
+        reliability_note="Ohne Turnierquelle kann YourCalendar noch nicht sicher wissen, welche WM oder EM gerade läuft.",
+        data_warnings=(
+            "WM/EM kann je Sportart, Verband und Altersklasse unterschiedlich definiert sein.",
+            "Turnierzeiträume, Zeitzonen und Spielplanänderungen brauchen eine verlässliche Quelle.",
+            "Bis zur Quellenanbindung werden keine echten WM-/EM-Termine behauptet.",
+        ),
+        params=None,
+    ),
+    "global-combat-events": PublishedCalendar(
+        feed_id="global-combat-events",
+        category_id="combat",
+        name="Kampfsport weltweit",
+        description="MMA, Boxen, Kickboxen, Muay Thai, Grappling und weitere Kampfsport-Events weltweit.",
+        source_label="Globaler Kampfsport-Provider noch nicht angebunden",
+        source_type="planned",
+        source_type_label="Datenquelle offen",
+        quality_level="planned",
+        quality_label="Provider nötig",
+        update_policy="Noch kein produktiver Importjob. Weltweite Fight Cards brauchen Provider- und Rechteklärung.",
+        reliability_note="Sämtliche weltweiten Kampfsportveranstaltungen können erst mit belastbarer globaler Quelle angezeigt werden.",
+        data_warnings=(
+            "Ohne Provider sind keine vollständigen weltweiten Fight Cards gesichert.",
+            "Regionale Shows, Verschiebungen, Weight-ins und kurzfristige Gegnerwechsel sind datenintensiv.",
+            "Mehrere Quellen können nötig sein, weil kein einzelner freier Feed gesichert alle Kampfsportarten abdeckt.",
+        ),
+        params=None,
     ),
 }
 
@@ -221,6 +349,8 @@ def normalize_feed_params(params: dict[str, list[str]]) -> dict[str, list[str]]:
 
 
 def params_from_calendar(calendar: PublishedCalendar) -> dict[str, list[str]]:
+    if calendar.params is None:
+        raise KeyError(calendar.feed_id)
     return {key: [value] for key, value in calendar.params.items()}
 
 
@@ -236,7 +366,8 @@ def feed_path_for_params(params: dict[str, list[str]]) -> str:
 
 
 def published_feed_path(feed_id: str) -> str:
-    if feed_id not in PUBLISHED_CALENDARS:
+    calendar = PUBLISHED_CALENDARS.get(feed_id)
+    if calendar is None or calendar.params is None:
         raise KeyError(feed_id)
     return f"/feeds/{feed_id}.ics"
 
@@ -252,6 +383,8 @@ def resolve_feed(feed_id: str, query: str) -> tuple[str, dict[str, list[str]], b
         return calendar_name_for_params(params), params, params.get("sample", ["false"])[0] == "true"
 
     calendar = PUBLISHED_CALENDARS[feed_id]
+    if calendar.params is None:
+        raise KeyError(feed_id)
     return calendar.name, params_from_calendar(calendar), calendar.sample
 
 
@@ -271,9 +404,54 @@ def format_catalog_timestamp(value: datetime) -> str:
     return value.strftime("%d.%m.%Y %H:%M %Z")
 
 
+def sport_coverage_option_payload(option: SportCoverageOption) -> dict:
+    return {
+        "id": option.option_id,
+        "name": option.name,
+        "scope": option.scope,
+        "group": option.group,
+        "statusLabel": option.status_label,
+        "description": option.description,
+        "sourceNote": option.source_note,
+    }
+
+
+def sports_coverage_payload() -> dict:
+    return {
+        "europeSports": [sport_coverage_option_payload(option) for option in EUROPEAN_SPORTS],
+        "globalCombatSports": [sport_coverage_option_payload(option) for option in GLOBAL_COMBAT_SPORTS],
+        "championships": [
+            {
+                "id": "world-championships",
+                "name": "Weltmeisterschaften",
+                "scope": "Weltweit",
+                "group": "WM/EM",
+                "statusLabel": "Provider nötig",
+                "description": "Laufende und bevorstehende Weltmeisterschaften sollen je Sportart angezeigt werden.",
+                "sourceNote": "Noch keine verlässliche sportartenübergreifende Turnierquelle angebunden.",
+            },
+            {
+                "id": "european-championships",
+                "name": "Europameisterschaften",
+                "scope": "Europa",
+                "group": "WM/EM",
+                "statusLabel": "Provider nötig",
+                "description": "Laufende und bevorstehende Europameisterschaften sollen je Sportart angezeigt werden.",
+                "sourceNote": "Noch keine verlässliche sportartenübergreifende Turnierquelle angebunden.",
+            },
+        ],
+    }
+
+
 def calendar_payload(calendar: PublishedCalendar, absolute_url, checked_at: datetime) -> dict:
-    feed_url = published_feed_path(calendar.feed_id)
+    has_feed = calendar.params is not None
+    feed_url = published_feed_path(calendar.feed_id) if has_feed else None
     checked_label = format_catalog_timestamp(checked_at)
+    status = "planned"
+    status_label = "Geplant"
+    if has_feed:
+        status = "sample" if calendar.sample else "available"
+        status_label = "Sample" if calendar.sample else "Verfügbar"
     return {
         "id": calendar.feed_id,
         "categoryId": calendar.category_id,
@@ -281,8 +459,9 @@ def calendar_payload(calendar: PublishedCalendar, absolute_url, checked_at: date
         "description": calendar.description,
         "sourceLabel": calendar.source_label,
         "sample": calendar.sample,
-        "status": "sample" if calendar.sample else "available",
-        "statusLabel": "Sample" if calendar.sample else "Verfügbar",
+        "hasFeed": has_feed,
+        "status": status,
+        "statusLabel": status_label,
         "quality": {
             "level": calendar.quality_level,
             "label": calendar.quality_label,
@@ -295,7 +474,7 @@ def calendar_payload(calendar: PublishedCalendar, absolute_url, checked_at: date
             "warnings": list(calendar.data_warnings),
         },
         "feedUrl": feed_url,
-        "subscribeUrl": absolute_url(feed_url),
+        "subscribeUrl": absolute_url(feed_url) if feed_url else None,
     }
 
 
@@ -439,6 +618,7 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
                 "ok": True,
                 "generatedAt": generated_at.isoformat(),
                 "qualityLegend": list(QUALITY_LEGEND),
+                "sportsCoverage": sports_coverage_payload(),
                 "categories": categories,
                 "calendars": calendars,
             }

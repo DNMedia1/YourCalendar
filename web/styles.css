@@ -232,6 +232,13 @@ h3 { font-size: 18px; }
   color: var(--green-strong);
 }
 
+.button.disabled {
+  border-color: var(--line);
+  background: #eef4ef;
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -291,6 +298,112 @@ h3 { font-size: 18px; }
 .legend-item span {
   color: var(--muted);
   font-size: 13px;
+  line-height: 1.35;
+}
+
+.coverage-panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.coverage-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.coverage-head h4 {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.coverage-head > span {
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #fff4e6;
+  color: #7a4600;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.coverage-groups {
+  display: grid;
+  gap: 12px;
+}
+
+.coverage-group {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.coverage-group > strong {
+  font-size: 13px;
+}
+
+.coverage-options {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.coverage-chip {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.coverage-chip.active {
+  border-color: var(--green);
+  background: #eef8f2;
+  color: var(--green-strong);
+}
+
+.coverage-detail {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfdfb;
+}
+
+.coverage-detail div {
+  display: grid;
+  gap: 4px;
+}
+
+.coverage-detail span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.coverage-detail p {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.coverage-detail em {
+  color: #7a4600;
+  font-style: normal;
+  font-weight: 800;
   line-height: 1.35;
 }
 
@@ -402,6 +515,11 @@ h3 { font-size: 18px; }
   color: var(--green-strong);
 }
 
+.status-pill.planned {
+  background: #eef4ef;
+  color: var(--muted);
+}
+
 .source-row {
   display: grid;
   gap: 4px;
@@ -464,8 +582,15 @@ h3 { font-size: 18px; }
 
 .calendar-actions {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.action-note {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
 }
 
 .catalog-empty {
@@ -669,6 +794,14 @@ h3 { font-size: 18px; }
   .quality-legend {
     grid-template-columns: 1fr;
     padding: 12px 16px;
+  }
+
+  .coverage-panel {
+    padding: 14px 16px;
+  }
+
+  .coverage-head {
+    flex-direction: column;
   }
 
   .quality-grid {
