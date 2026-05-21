@@ -100,6 +100,12 @@ Each successful import also stores the latest event snapshot in
 The comparison is keyed by stable event `UID` and tracks changed start times,
 locations, summaries and calendar status values.
 
+The first scheduler architecture is documented in
+`docs/hosting-scheduler-architecture.md`. The matching GitHub Actions workflow
+can be started manually and also runs on a six-hour schedule. It uploads feed,
+run-log, snapshot and change-report artifacts without committing generated
+runtime files back into Git.
+
 In production, set `YOURCALENDAR_PUBLIC_BASE_URL` to the deployed HTTPS origin
 so the UI exposes subscription URLs such as:
 

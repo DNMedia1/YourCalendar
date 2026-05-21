@@ -87,7 +87,7 @@ flowchart LR
 | Internes Event-Datenmodell definieren | Dev | P0 | Schema fuer normalisierte Events |
 | ICS Feed Generator bauen | Dev | P0 | Valider abonnierbarer Kalenderfeed |
 | Website-Grundstruktur erstellen | Dev | P0 | Kategorien, Kalenderdetailseite, Abo-Link |
-| Hosting- und Job-Architektur festlegen | DevOps | P0 | Vorschlag fuer Webhosting, DB, Scheduler |
+| Hosting- und Job-Architektur festlegen | DevOps | P0 | Architektur-Doku und erster GitHub-Actions-Scheduler |
 
 ### Source Research
 
@@ -134,4 +134,3 @@ flowchart LR
 - Wollen Nutzer nur abonnieren, oder spaeter eigene Interessen/Profile speichern?
 - Wie stark darf man kuratieren, wenn Datenquellen lueckenhaft sind?
 - Welche Kategorien sind fuer den ersten echten Nutzerkreis am wichtigsten?
-
