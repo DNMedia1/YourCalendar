@@ -1,0 +1,21 @@
+/* Mobile‑first overrides for YourCalendar */
+
+/* Increase tap targets */
+button, .segment, .icon-button, .button, input[type="checkbox"] {
+  min-height: 48px;
+  font-size: 1rem;
+}
+
+/* Adjust sidebar spacing on very small screens */
+@media (max-width: 600px) {
+  .sidebar {
+    padding: 12px;
+    gap: 12px;
+  }
+  .brand h1 {
+    font-size: 1.5rem;
+  }
+  .brand p {
+    font-size: 0.9rem;
+  }
+}
