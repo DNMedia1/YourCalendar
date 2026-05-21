@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import unittest
 from datetime import datetime
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from urllib.parse import parse_qs, urlparse
 from zoneinfo import ZoneInfo
 
@@ -16,6 +18,7 @@ from web_app import (
     source_health_payload,
     sports_coverage_payload,
 )
+from yourcalendar_runs import SourceRunRecord, latest_runs_by_source, record_source_run
 from yourcalendar_sources import source_monitor_payload, source_plan_payload
 
 
@@ -136,6 +139,51 @@ class WebFeedTest(unittest.TestCase):
         self.assertIn("global-combat-provider", by_id)
         self.assertEqual(by_id["openligadb-football"]["eventCountLabel"], "Pro Abruf ermittelt")
         self.assertIn("global-combat-events", by_id["global-combat-provider"]["calendarIds"])
+
+    def test_source_monitor_merges_latest_persisted_run(self) -> None:
+        run = {
+            "sourceId": "openligadb-football",
+            "status": "ok",
+            "checkedAt": "2026-05-21T12:00:00+02:00",
+            "checkedLabel": "Geprüft 21.05.2026 12:00 CEST",
+            "eventCount": 18,
+            "message": "Der OpenLigaDB-Abruf lieferte Termine.",
+        }
+
+        monitor = source_monitor_payload({"openligadb-football": run})
+        openliga = {
+            item["id"]: item for item in monitor["items"]
+        }["openligadb-football"]
+
+        self.assertEqual(openliga["lastRun"]["eventCount"], 18)
+        self.assertEqual(openliga["lastRun"]["checkedLabel"], "Geprüft 21.05.2026 12:00 CEST")
+
+    def test_source_run_store_keeps_latest_run_by_source(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "source-runs.json"
+            first = SourceRunRecord(
+                source_id="openligadb-football",
+                status="empty",
+                checked_at=datetime(2026, 5, 21, 11, 0, tzinfo=ZoneInfo("Europe/Berlin")),
+                checked_label="Geprüft 21.05.2026 11:00 CEST",
+                event_count=0,
+                message="Keine Termine.",
+            )
+            second = SourceRunRecord(
+                source_id="openligadb-football",
+                status="ok",
+                checked_at=datetime(2026, 5, 21, 12, 0, tzinfo=ZoneInfo("Europe/Berlin")),
+                checked_label="Geprüft 21.05.2026 12:00 CEST",
+                event_count=7,
+                message="Termine gefunden.",
+            )
+
+            record_source_run(path, first)
+            record_source_run(path, second)
+            latest = latest_runs_by_source(path)
+
+        self.assertEqual(latest["openligadb-football"]["status"], "ok")
+        self.assertEqual(latest["openligadb-football"]["eventCount"], 7)
 
     def test_source_health_marks_empty_live_queries_with_recovery_hints(self) -> None:
         params = normalize_feed_params({"sample": ["false"], "leagues": ["bl2"], "season": ["2026"]})

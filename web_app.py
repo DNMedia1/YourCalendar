@@ -26,12 +26,14 @@ from yourcalendar_poc import (
     render_ics,
     write_ics,
 )
+from yourcalendar_runs import SourceRunRecord, latest_runs_by_source, record_source_run
 from yourcalendar_sources import source_monitor_payload, source_plan_payload
 
 
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
 OUTPUT_PATH = ROOT / DEFAULT_OUTPUT
+RUN_HISTORY_PATH = ROOT / "output" / "source-runs.json"
 CALENDAR_NAME = "YourCalendar German Football"
 SAMPLE_CALENDAR_NAME = "YourCalendar Sample Football"
 CURRENT_FEED_ID = "current"
@@ -587,6 +589,7 @@ def source_health_payload(
                 **monitor_observation,
                 "status": "error",
                 "message": "Der OpenLigaDB-Abruf ist fehlgeschlagen.",
+                "technicalDetail": error,
             },
         }
 
@@ -633,6 +636,20 @@ def source_health_payload(
     }
 
 
+def persist_monitor_observation(observation: dict) -> dict:
+    checked_at = datetime.fromisoformat(observation["checkedAt"])
+    record = SourceRunRecord(
+        source_id=observation["sourceId"],
+        status=observation["status"],
+        checked_at=checked_at,
+        checked_label=observation["checkedLabel"],
+        event_count=int(observation["eventCount"]),
+        message=observation["message"],
+        technical_detail=observation.get("technicalDetail"),
+    )
+    return record_source_run(RUN_HISTORY_PATH, record)
+
+
 class YourCalendarHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(WEB_ROOT), **kwargs)
@@ -677,6 +694,9 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
             use_sample = normalized_params.get("sample", ["false"])[0] == "true"
             feed_url = feed_path_for_params(normalized_params)
             source_health = source_health_payload(use_sample, len(events), normalized_params)
+            source_health["monitorObservation"] = persist_monitor_observation(
+                source_health["monitorObservation"]
+            )
             self.send_json(
                 {
                     "ok": True,
@@ -694,6 +714,9 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
             )
         except (POCError, ValueError) as exc:
             source_health = source_health_payload(False, 0, normalized_params, str(exc))
+            source_health["monitorObservation"] = persist_monitor_observation(
+                source_health["monitorObservation"]
+            )
             self.send_json(
                 {
                     "ok": False,
@@ -720,7 +743,7 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
                 "qualityLegend": list(QUALITY_LEGEND),
                 "sportsCoverage": sports_coverage_payload(),
                 "sourcePlan": source_plan_payload(),
-                "sourceMonitor": source_monitor_payload(),
+                "sourceMonitor": source_monitor_payload(latest_runs_by_source(RUN_HISTORY_PATH)),
                 "categories": categories,
                 "calendars": calendars,
             }

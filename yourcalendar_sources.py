@@ -235,8 +235,8 @@ def source_plan_payload() -> dict:
     }
 
 
-def source_monitor_record_payload(record: SourceMonitorRecord) -> dict:
-    return {
+def source_monitor_record_payload(record: SourceMonitorRecord, latest_run: dict | None = None) -> dict:
+    payload = {
         "id": record.record_id,
         "sourceLabel": record.source_label,
         "scope": record.scope,
@@ -248,10 +248,17 @@ def source_monitor_record_payload(record: SourceMonitorRecord) -> dict:
         "message": record.message,
         "nextAction": record.next_action,
     }
+    if latest_run:
+        payload["lastRun"] = latest_run
+    return payload
 
 
-def source_monitor_payload() -> dict:
-    records = [source_monitor_record_payload(record) for record in SOURCE_MONITOR_RECORDS]
+def source_monitor_payload(latest_runs: dict[str, dict] | None = None) -> dict:
+    latest_runs = latest_runs or {}
+    records = [
+        source_monitor_record_payload(record, latest_runs.get(record.record_id))
+        for record in SOURCE_MONITOR_RECORDS
+    ]
     return {
         "total": len(records),
         "watching": sum(1 for record in SOURCE_MONITOR_RECORDS if record.status in {"watching", "ok"}),

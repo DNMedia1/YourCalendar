@@ -323,12 +323,15 @@ function renderSourceMonitor() {
   }
 
   elements.sourceMonitor.innerHTML = items.map((item) => {
-    const liveStatus = item.liveStatus || item.status;
+    const lastRun = item.lastRun || null;
+    const liveStatus = item.liveStatus || lastRun?.status || item.status;
     const eventCount = Number.isInteger(item.lastObservationCount)
       ? `${item.lastObservationCount} Events`
+      : Number.isInteger(lastRun?.eventCount)
+        ? `${lastRun.eventCount} Events`
       : escapeHtml(item.eventCountLabel);
-    const checkedLabel = item.lastObservationLabel || item.lastCheckedMode;
-    const message = item.lastObservationMessage || item.message;
+    const checkedLabel = item.lastObservationLabel || lastRun?.checkedLabel || item.lastCheckedMode;
+    const message = item.lastObservationMessage || lastRun?.message || item.message;
     return `
       <article class="source-monitor-card">
         <div class="source-monitor-card-head">
