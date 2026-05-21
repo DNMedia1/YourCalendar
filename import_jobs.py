@@ -9,12 +9,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
+from event_changes import compare_snapshots, load_snapshot, save_changes, save_snapshot, snapshot_from_ics, summarize_changes
 from web_app import PUBLISHED_CALENDARS, feed_filename, render_feed
 
 
 ROOT = Path(__file__).resolve().parent
 FEED_CACHE_DIR = ROOT / "output" / "feeds"
 IMPORT_RUNS_PATH = ROOT / "output" / "import-runs.json"
+EVENT_SNAPSHOT_DIR = ROOT / "output" / "event-snapshots"
+EVENT_CHANGES_DIR = ROOT / "output" / "event-changes"
 
 RenderFeed = Callable[[str], tuple[str, bool]]
 
@@ -25,6 +28,14 @@ def utc_now_iso() -> str:
 
 def feed_cache_path(feed_id: str) -> Path:
     return FEED_CACHE_DIR / feed_filename(feed_id)
+
+
+def event_snapshot_path(feed_id: str) -> Path:
+    return EVENT_SNAPSHOT_DIR / f"{feed_id}.json"
+
+
+def event_changes_path(feed_id: str) -> Path:
+    return EVENT_CHANGES_DIR / f"{feed_id}.json"
 
 
 def display_path(path: Path) -> str:
@@ -76,6 +87,11 @@ def import_calendar(feed_id: str, renderer: RenderFeed = render_feed) -> dict:
     try:
         content, is_sample = renderer(feed_id)
         event_count = count_events(content)
+        previous_snapshot = load_snapshot(event_snapshot_path(feed_id))
+        current_snapshot = snapshot_from_ics(content)
+        changes = compare_snapshots(previous_snapshot, current_snapshot)
+        save_snapshot(event_snapshot_path(feed_id), current_snapshot)
+        save_changes(event_changes_path(feed_id), changes)
         warnings = []
         if event_count == 0:
             warnings.append("Feed contains no events.")
@@ -91,6 +107,8 @@ def import_calendar(feed_id: str, renderer: RenderFeed = render_feed) -> dict:
             "warnings": warnings,
             "error": None,
             "outputPath": display_path(output_path),
+            "changeSummary": summarize_changes(changes),
+            "changesPath": display_path(event_changes_path(feed_id)),
         }
     except Exception as exc:
         return {

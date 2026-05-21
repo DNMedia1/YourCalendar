@@ -6,6 +6,8 @@ __pycache__/
 output/source-runs.json
 output/import-runs.json
 output/feeds/
+output/event-snapshots/
+output/event-changes/
 sources.json
 .env
 node_modules/
