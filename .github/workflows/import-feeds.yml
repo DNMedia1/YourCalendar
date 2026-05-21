@@ -1,0 +1,33 @@
+name: Import Feeds
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
+
+jobs:
+  import-feeds:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile import modules
+        run: python3 -B -m py_compile import_jobs.py event_changes.py web_app.py yourcalendar_poc.py
+      - name: Run import job
+        run: python3 -B import_jobs.py
+      - name: Upload import artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yourcalendar-import-output
+          path: |
+            output/feeds/
+            output/import-runs.json
+            output/event-snapshots/
+            output/event-changes/
+          if-no-files-found: warn
+          retention-days: 14
