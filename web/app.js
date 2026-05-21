@@ -4,6 +4,7 @@ const state = {
   qualityLegend: [],
   sportsCoverage: { europeSports: [], globalCombatSports: [], championships: [] },
   sourcePlan: { total: 0, active: 0, needsWork: 0, items: [] },
+  sourceMonitor: { total: 0, watching: 0, planned: 0, items: [] },
   sourceHealth: {
     status: "sample",
     label: "Sample",
@@ -33,6 +34,8 @@ const elements = {
   coverageDetail: $("coverageDetail"),
   sourcePlanStatus: $("sourcePlanStatus"),
   sourcePlan: $("sourcePlan"),
+  sourceMonitorStatus: $("sourceMonitorStatus"),
+  sourceMonitor: $("sourceMonitor"),
   categoryTabs: $("categoryTabs"),
   calendarCatalog: $("calendarCatalog"),
   teamSearch: $("teamSearch"),
@@ -129,7 +132,8 @@ function applySourceHealth(sourceHealth = null, fallbackLabel = "Bereit") {
     detail: "Noch kein Quellenstatus verfügbar.",
     hints: [],
   };
-  state.sourceHealth = health;
+    state.sourceHealth = health;
+  updateMonitorObservation(health.monitorObservation);
   elements.sourceStatus.textContent = health.label || fallbackLabel;
   elements.sourceStatus.dataset.status = health.status || "unknown";
   elements.sourceNote.textContent = health.detail || "";
@@ -146,6 +150,7 @@ async function loadCalendars() {
     state.qualityLegend = payload.qualityLegend || [];
     state.sportsCoverage = payload.sportsCoverage || { europeSports: [], globalCombatSports: [], championships: [] };
     state.sourcePlan = payload.sourcePlan || { total: 0, active: 0, needsWork: 0, items: [] };
+    state.sourceMonitor = payload.sourceMonitor || { total: 0, watching: 0, planned: 0, items: [] };
     const selectedExists = state.categories.some((category) => category.id === state.selectedCategoryId);
     state.selectedCategoryId = selectedExists ? state.selectedCategoryId : state.categories[0]?.id || "";
     if (!findCoverageOption(state.selectedCoverageId)) {
@@ -160,6 +165,8 @@ async function loadCalendars() {
     elements.coverageDetail.innerHTML = "";
     elements.sourcePlanStatus.textContent = "Fehler";
     elements.sourcePlan.innerHTML = "";
+    elements.sourceMonitorStatus.textContent = "Fehler";
+    elements.sourceMonitor.innerHTML = "";
     elements.categoryTabs.innerHTML = "";
     elements.calendarCatalog.innerHTML = `<div class="empty-state">Kalenderliste konnte nicht geladen werden.</div>`;
     toast(error.message, true);
@@ -172,6 +179,7 @@ function renderCatalog() {
   renderQualityLegend();
   renderSportsCoverage();
   renderSourcePlan();
+  renderSourceMonitor();
   renderCategoryTabs();
   renderCalendarCatalog();
 }
@@ -286,6 +294,65 @@ function renderSourcePlan() {
       </div>
     </article>
   `).join("");
+}
+
+function updateMonitorObservation(observation = null) {
+  if (!observation || !state.sourceMonitor.items?.length) return;
+  state.sourceMonitor = {
+    ...state.sourceMonitor,
+    items: state.sourceMonitor.items.map((item) => {
+      if (item.id !== observation.sourceId) return item;
+      return {
+        ...item,
+        liveStatus: observation.status,
+        lastObservationLabel: observation.checkedLabel,
+        lastObservationCount: observation.eventCount,
+        lastObservationMessage: observation.message,
+      };
+    }),
+  };
+  renderSourceMonitor();
+}
+
+function renderSourceMonitor() {
+  const items = state.sourceMonitor.items || [];
+  elements.sourceMonitorStatus.textContent = `${state.sourceMonitor.watching || 0} beobachtet · ${state.sourceMonitor.planned || 0} geplant`;
+  if (!items.length) {
+    elements.sourceMonitor.innerHTML = `<div class="empty-state">Noch keine Quellen im Monitoring.</div>`;
+    return;
+  }
+
+  elements.sourceMonitor.innerHTML = items.map((item) => {
+    const liveStatus = item.liveStatus || item.status;
+    const eventCount = Number.isInteger(item.lastObservationCount)
+      ? `${item.lastObservationCount} Events`
+      : escapeHtml(item.eventCountLabel);
+    const checkedLabel = item.lastObservationLabel || item.lastCheckedMode;
+    const message = item.lastObservationMessage || item.message;
+    return `
+      <article class="source-monitor-card">
+        <div class="source-monitor-card-head">
+          <div>
+            <span>${escapeHtml(item.scope)}</span>
+            <strong>${escapeHtml(item.sourceLabel)}</strong>
+          </div>
+          <em class="${escapeAttribute(liveStatus)}">${escapeHtml(item.statusLabel)}</em>
+        </div>
+        <dl>
+          <div>
+            <dt>Letzte Prüfung</dt>
+            <dd>${escapeHtml(checkedLabel)}</dd>
+          </div>
+          <div>
+            <dt>Event-Anzahl</dt>
+            <dd>${eventCount}</dd>
+          </div>
+        </dl>
+        <p>${escapeHtml(message)}</p>
+        <small>${escapeHtml(item.nextAction)}</small>
+      </article>
+    `;
+  }).join("");
 }
 
 function renderCalendarCatalog() {

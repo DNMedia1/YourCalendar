@@ -26,7 +26,7 @@ from yourcalendar_poc import (
     render_ics,
     write_ics,
 )
-from yourcalendar_sources import source_plan_payload
+from yourcalendar_sources import source_monitor_payload, source_plan_payload
 
 
 ROOT = Path(__file__).resolve().parent
@@ -547,7 +547,15 @@ def source_health_payload(
     count: int,
     params: dict[str, list[str]],
     error: str | None = None,
+    checked_at: datetime | None = None,
 ) -> dict:
+    checked = catalog_timestamp(checked_at)
+    monitor_observation = {
+        "sourceId": "yourcalendar-sample" if use_sample else "openligadb-football",
+        "checkedAt": checked.isoformat(),
+        "checkedLabel": f"Geprüft {format_catalog_timestamp(checked)}",
+        "eventCount": count,
+    }
     if use_sample:
         return {
             "status": "sample",
@@ -556,6 +564,11 @@ def source_health_payload(
             "detail": "Diese Termine sind Testdaten und keine echten Spiele.",
             "hints": ["Zum Prüfen der echten Quelle in den Live-Modus wechseln."],
             "selectedLeagues": selected_league_names(params),
+            "monitorObservation": {
+                **monitor_observation,
+                "status": "ok",
+                "message": "Sample-Daten wurden lokal erzeugt.",
+            },
         }
 
     if error:
@@ -570,6 +583,11 @@ def source_health_payload(
             ],
             "selectedLeagues": selected_league_names(params),
             "technicalDetail": error,
+            "monitorObservation": {
+                **monitor_observation,
+                "status": "error",
+                "message": "Der OpenLigaDB-Abruf ist fehlgeschlagen.",
+            },
         }
 
     if count == 0:
@@ -588,6 +606,11 @@ def source_health_payload(
                 "Andere Liga auswählen, falls der Wettbewerb noch nicht terminiert ist.",
             ],
             "selectedLeagues": selected_league_names(params),
+            "monitorObservation": {
+                **monitor_observation,
+                "status": "empty",
+                "message": "Der OpenLigaDB-Abruf war erreichbar, lieferte aber keine Termine.",
+            },
         }
 
     return {
@@ -602,6 +625,11 @@ def source_health_payload(
             "Anstoßzeiten und Verlegungen bleiben als POC-Qualitätsrisiko markiert.",
         ],
         "selectedLeagues": selected_league_names(params),
+        "monitorObservation": {
+            **monitor_observation,
+            "status": "ok",
+            "message": "Der OpenLigaDB-Abruf lieferte Termine.",
+        },
     }
 
 
@@ -692,6 +720,7 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
                 "qualityLegend": list(QUALITY_LEGEND),
                 "sportsCoverage": sports_coverage_payload(),
                 "sourcePlan": source_plan_payload(),
+                "sourceMonitor": source_monitor_payload(),
                 "categories": categories,
                 "calendars": calendars,
             }

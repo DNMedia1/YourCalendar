@@ -22,6 +22,20 @@ class SourceIntegrationPlan:
     acceptance_criteria: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class SourceMonitorRecord:
+    record_id: str
+    source_label: str
+    scope: str
+    status: str
+    status_label: str
+    calendar_ids: tuple[str, ...]
+    last_checked_mode: str
+    event_count_label: str
+    message: str
+    next_action: str
+
+
 class SourceAdapter(Protocol):
     """Adapter contract for future event source importers."""
 
@@ -131,6 +145,70 @@ SOURCE_INTEGRATION_PLANS = (
 )
 
 
+SOURCE_MONITOR_RECORDS = (
+    SourceMonitorRecord(
+        record_id="openligadb-football",
+        source_label="OpenLigaDB Fußball",
+        scope="Deutschland",
+        status="watching",
+        status_label="Beobachtet",
+        calendar_ids=("football-germany",),
+        last_checked_mode="Beim Feed- oder UI-Abruf",
+        event_count_label="Pro Abruf ermittelt",
+        message="Der POC ruft Spielplandaten direkt beim Nutzerabruf ab. Ein geplanter Importjob existiert noch nicht.",
+        next_action="Importjob mit persistierter letzter Prüfung und Fehlerhistorie bauen.",
+    ),
+    SourceMonitorRecord(
+        record_id="yourcalendar-sample",
+        source_label="YourCalendar Sample",
+        scope="Intern",
+        status="ok",
+        status_label="Stabil",
+        calendar_ids=("sample-ksc",),
+        last_checked_mode="Lokal generiert",
+        event_count_label="2 Sample-Termine",
+        message="Sample-Daten sind bewusst statisch und dienen nur zum Prüfen des Abo-Flows.",
+        next_action="Sample bleibt als Testmodus erhalten, darf aber nie als echter Sportkalender erscheinen.",
+    ),
+    SourceMonitorRecord(
+        record_id="europe-sports-provider",
+        source_label="Europa-Multi-Sport",
+        scope="Europa",
+        status="planned",
+        status_label="Kein Job",
+        calendar_ids=("europe-all-sports",),
+        last_checked_mode="Noch nicht angebunden",
+        event_count_label="Keine produktiven Events",
+        message="Für breite europäische Sportarten fehlt noch eine verlässliche Provider-API.",
+        next_action="Provider-Matrix abschließen und Adapter-Spike starten.",
+    ),
+    SourceMonitorRecord(
+        record_id="global-combat-provider",
+        source_label="Globaler Kampfsport",
+        scope="Weltweit",
+        status="planned",
+        status_label="Kein Job",
+        calendar_ids=("global-combat-events",),
+        last_checked_mode="Noch nicht angebunden",
+        event_count_label="Keine produktiven Events",
+        message="Weltweite Fight Cards brauchen eine lizenzsichere Quelle oder mehrere geprüfte Quellen.",
+        next_action="Quellenstrategie für MMA, Boxen, Kickboxen und Grappling getrennt prüfen.",
+    ),
+    SourceMonitorRecord(
+        record_id="championship-detector",
+        source_label="WM/EM-Erkennung",
+        scope="Weltweit und Europa",
+        status="design",
+        status_label="Konzept",
+        calendar_ids=("world-europe-championships",),
+        last_checked_mode="Noch nicht angebunden",
+        event_count_label="Keine produktiven Turniere",
+        message="WM/EM-Erkennung braucht klare Regeln pro Sportart, Verband und Turnierphase.",
+        next_action="Turniermodell definieren und erste Sportart als Spike auswählen.",
+    ),
+)
+
+
 def source_integration_plan_payload(plan: SourceIntegrationPlan) -> dict:
     return {
         "id": plan.plan_id,
@@ -154,4 +232,29 @@ def source_plan_payload() -> dict:
         "active": sum(1 for plan in SOURCE_INTEGRATION_PLANS if plan.status == "active"),
         "needsWork": sum(1 for plan in SOURCE_INTEGRATION_PLANS if plan.status != "active"),
         "items": plans,
+    }
+
+
+def source_monitor_record_payload(record: SourceMonitorRecord) -> dict:
+    return {
+        "id": record.record_id,
+        "sourceLabel": record.source_label,
+        "scope": record.scope,
+        "status": record.status,
+        "statusLabel": record.status_label,
+        "calendarIds": list(record.calendar_ids),
+        "lastCheckedMode": record.last_checked_mode,
+        "eventCountLabel": record.event_count_label,
+        "message": record.message,
+        "nextAction": record.next_action,
+    }
+
+
+def source_monitor_payload() -> dict:
+    records = [source_monitor_record_payload(record) for record in SOURCE_MONITOR_RECORDS]
+    return {
+        "total": len(records),
+        "watching": sum(1 for record in SOURCE_MONITOR_RECORDS if record.status in {"watching", "ok"}),
+        "planned": sum(1 for record in SOURCE_MONITOR_RECORDS if record.status in {"planned", "design"}),
+        "items": records,
     }

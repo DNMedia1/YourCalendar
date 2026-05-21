@@ -16,7 +16,7 @@ from web_app import (
     source_health_payload,
     sports_coverage_payload,
 )
-from yourcalendar_sources import source_plan_payload
+from yourcalendar_sources import source_monitor_payload, source_plan_payload
 
 
 class WebFeedTest(unittest.TestCase):
@@ -124,6 +124,19 @@ class WebFeedTest(unittest.TestCase):
         self.assertIn("global-combat-events", by_id["global-combat-provider"]["calendarIds"])
         self.assertTrue(by_id["championship-detector"]["acceptanceCriteria"])
 
+    def test_source_monitor_exposes_all_current_source_tracks(self) -> None:
+        monitor = source_monitor_payload()
+        by_id = {item["id"]: item for item in monitor["items"]}
+
+        self.assertEqual(monitor["total"], len(monitor["items"]))
+        self.assertGreaterEqual(monitor["watching"], 1)
+        self.assertGreaterEqual(monitor["planned"], 1)
+        self.assertIn("openligadb-football", by_id)
+        self.assertIn("yourcalendar-sample", by_id)
+        self.assertIn("global-combat-provider", by_id)
+        self.assertEqual(by_id["openligadb-football"]["eventCountLabel"], "Pro Abruf ermittelt")
+        self.assertIn("global-combat-events", by_id["global-combat-provider"]["calendarIds"])
+
     def test_source_health_marks_empty_live_queries_with_recovery_hints(self) -> None:
         params = normalize_feed_params({"sample": ["false"], "leagues": ["bl2"], "season": ["2026"]})
 
@@ -133,6 +146,9 @@ class WebFeedTest(unittest.TestCase):
         self.assertEqual(health["label"], "Keine Termine")
         self.assertIn("2026", " ".join(health["hints"]))
         self.assertEqual(health["selectedLeagues"], ["2. Bundesliga"])
+        self.assertEqual(health["monitorObservation"]["sourceId"], "openligadb-football")
+        self.assertEqual(health["monitorObservation"]["status"], "empty")
+        self.assertEqual(health["monitorObservation"]["eventCount"], 0)
 
     def test_source_health_uses_safe_error_copy_for_openligadb_failures(self) -> None:
         params = normalize_feed_params({"sample": ["false"], "leagues": ["bl1"]})
@@ -144,6 +160,7 @@ class WebFeedTest(unittest.TestCase):
         self.assertIn("nicht gelesen", health["title"])
         self.assertIn("Kalender bleibt verfügbar", health["detail"])
         self.assertEqual(health["technicalDetail"], "HTTP 500 while fetching test-url")
+        self.assertEqual(health["monitorObservation"]["status"], "error")
 
 
 if __name__ == "__main__":
