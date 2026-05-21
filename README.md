@@ -1,4 +1,4 @@
-# YourCalendar KSC POC
+# YourCalendar POC
 
 This is a first command-line proof of concept for the YourCalendar idea.
 
