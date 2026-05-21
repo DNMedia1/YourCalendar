@@ -95,6 +95,11 @@ The job writes cached feed files to `output/feeds/` and appends run metadata to
 file stays in place so existing subscription URLs can keep serving the last
 successful calendar.
 
+Each successful import also stores the latest event snapshot in
+`output/event-snapshots/` and writes a change report to `output/event-changes/`.
+The comparison is keyed by stable event `UID` and tracks changed start times,
+locations, summaries and calendar status values.
+
 In production, set `YOURCALENDAR_PUBLIC_BASE_URL` to the deployed HTTPS origin
 so the UI exposes subscription URLs such as:
 
