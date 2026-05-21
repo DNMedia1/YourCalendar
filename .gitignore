@@ -1,0 +1,16 @@
+# Git ignore rules for YourCalendar project
+.DS_Store
+__pycache__/
+*.pyc
+output/source-runs.json
+.env
+node_modules/
+.storybook-home/
+storybook-static/
+CLAUDE.md
+settings.json
+.claude/
+.claude/settings.local.json
+.snapshots/.claude/
+.snapshots/.claude/settings.json
+.snapshots/.claude/knowledge_base/
