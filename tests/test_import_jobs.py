@@ -65,7 +65,8 @@ class ImportJobTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "error")
         self.assertEqual(result["error"], "source unavailable")
-        self.assertEqual(cache_path.read_text(encoding="utf-8", newline=""), ICS_WITH_EVENT)
+        with cache_path.open(encoding="utf-8", newline="") as handle:
+            self.assertEqual(handle.read(), ICS_WITH_EVENT)
 
     def test_run_import_job_appends_run_log(self) -> None:
         results = import_jobs.run_import_job(

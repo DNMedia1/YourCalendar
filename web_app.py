@@ -168,7 +168,8 @@ def load_cached_feed(feed_id: str, query: str = "") -> str | None:
     path = cached_feed_path(feed_id)
     if not path.exists():
         return None
-    return path.read_text(encoding="utf-8", newline="")
+    with path.open(encoding="utf-8", newline="") as handle:
+        return handle.read()
 
 
 def resolve_feed(feed_id: str, query: str) -> tuple[str, dict[str, list[str]], bool]:
