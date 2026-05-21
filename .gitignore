@@ -4,6 +4,7 @@
 __pycache__/
 *.pyc
 output/source-runs.json
+sources.json
 .env
 node_modules/
 .storybook-home/

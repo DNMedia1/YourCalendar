@@ -5,7 +5,9 @@ import json
 import os
 import platform
 import subprocess
+import uuid
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -206,12 +208,38 @@ def load_events(params: dict[str, list[str]]) -> list:
     return events
 
 
+SOURCES_PATH = ROOT / "sources.json"
+
+
+def build_source(data: dict) -> tuple[dict | None, str | None]:
+    for field in ("name", "url"):
+        if not str(data.get(field, "")).strip():
+            return None, f"Missing required field: {field}"
+    return {
+        "id": str(uuid.uuid4()),
+        "name": str(data["name"]).strip(),
+        "url": str(data["url"]).strip(),
+        "category": str(data.get("category", "")).strip(),
+        "license": str(data.get("license", "")).strip(),
+        "status": str(data.get("status", "draft")).strip() or "draft",
+        "lastImport": None,
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+    }, None
+
+
 class YourCalendarHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(WEB_ROOT), **kwargs)
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path == "/api/sources":
+            self.handle_sources_get()
+            return
+        if parsed.path.startswith("/api/sources/"):
+            source_id = parsed.path.removeprefix("/api/sources/")
+            self.handle_sources_get_one(source_id)
+            return
         if parsed.path == "/api/events":
             self.handle_events(parsed.query)
             return
@@ -231,6 +259,29 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
             self.handle_legacy_download(parsed.query)
             return
         super().do_GET()
+
+    def do_POST(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path == "/api/sources":
+            self.handle_sources_post()
+            return
+        self.send_error(HTTPStatus.NOT_FOUND, "Endpoint not supported")
+
+    def do_PATCH(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path.startswith("/api/sources/"):
+            source_id = parsed.path.removeprefix("/api/sources/")
+            self.handle_sources_patch(source_id)
+            return
+        self.send_error(HTTPStatus.NOT_FOUND, "Endpoint not supported")
+
+    def do_DELETE(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path.startswith("/api/sources/"):
+            source_id = parsed.path.removeprefix("/api/sources/")
+            self.handle_sources_delete(source_id)
+            return
+        self.send_error(HTTPStatus.NOT_FOUND, "Endpoint not supported")
 
     def do_HEAD(self) -> None:
         parsed = urlparse(self.path)
@@ -347,6 +398,97 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
         except (POCError, ValueError) as exc:
             self.send_error(HTTPStatus.BAD_GATEWAY, str(exc))
 
+    def handle_open_apple(self, query: str) -> None:
+        if platform.system() != "Darwin":
+            self.send_json(
+                {"ok": False, "error": "Apple Calendar import is only available on macOS."},
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+        try:
+            params = normalize_feed_params(parse_qs(query))
+            write_ics(load_events(params), OUTPUT_PATH, calendar_name_for_params(params))
+            subprocess.run(["open", str(OUTPUT_PATH)], check=True)
+            self.send_json({"ok": True, "message": "Apple Calendar was opened."})
+        except (POCError, ValueError) as exc:
+            self.send_json(
+                {"ok": False, "error": str(exc)},
+                status=HTTPStatus.BAD_GATEWAY,
+            )
+        except subprocess.CalledProcessError as exc:
+            self.send_json(
+                {"ok": False, "error": f"Could not open Apple Calendar: {exc}"},
+                status=HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
+    def handle_sources_get(self) -> None:
+        sources = load_sources()
+        self.send_json({"ok": True, "sources": sources})
+
+    def handle_sources_get_one(self, source_id: str) -> None:
+        sources = load_sources()
+        for source in sources:
+            if source["id"] == source_id:
+                self.send_json({"ok": True, "source": source})
+                return
+        self.send_error(HTTPStatus.NOT_FOUND, "Source not found")
+
+    def handle_sources_post(self) -> None:
+        length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(length).decode()
+        try:
+            data = json.loads(body)
+        except json.JSONDecodeError:
+            self.send_json({"ok": False, "error": "Invalid JSON"}, status=HTTPStatus.BAD_REQUEST)
+            return
+        source, error = build_source(data)
+        if error:
+            self.send_json({"ok": False, "error": error}, status=HTTPStatus.BAD_REQUEST)
+            return
+        sources = load_sources()
+        sources.append(source)
+        save_sources(sources)
+        self.send_json({"ok": True, "source": source}, status=HTTPStatus.CREATED)
+
+    def handle_sources_patch(self, source_id: str) -> None:
+        length = int(self.headers.get('Content-Length', 0))
+        body = self.rfile.read(length).decode()
+        try:
+            data = json.loads(body)
+        except json.JSONDecodeError:
+            self.send_json({"ok": False, "error": "Invalid JSON"}, status=HTTPStatus.BAD_REQUEST)
+            return
+        sources = load_sources()
+        for source in sources:
+            if source["id"] == source_id:
+                # Update allowed fields
+                if "name" in data:
+                    source["name"] = data["name"]
+                if "url" in data:
+                    source["url"] = data["url"]
+                if "category" in data:
+                    source["category"] = data["category"]
+                if "license" in data:
+                    source["license"] = data["license"]
+                if "status" in data:
+                    source["status"] = data["status"]
+                if "lastImport" in data:
+                    source["lastImport"] = data["lastImport"]
+                source["updatedAt"] = datetime.now(timezone.utc).isoformat()
+                save_sources(sources)
+                self.send_json({"ok": True, "source": source})
+                return
+        self.send_error(HTTPStatus.NOT_FOUND, "Source not found")
+
+    def handle_sources_delete(self, source_id: str) -> None:
+        sources = load_sources()
+        new_sources = [s for s in sources if s["id"] != source_id]
+        if len(new_sources) == len(sources):
+            self.send_error(HTTPStatus.NOT_FOUND, "Source not found")
+            return
+        save_sources(new_sources)
+        self.send_json({"ok": True, "message": "Source deleted"})
+
     def serve_feed(self, feed_id: str, query: str, disposition: str, send_body: bool = True) -> None:
         content, is_sample = render_feed(feed_id, query)
         content_bytes = content.encode("utf-8")
@@ -378,6 +520,20 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
         scheme = forwarded_proto.split(",")[0].strip() if forwarded_proto else "http"
         host = self.headers.get("Host", "127.0.0.1:8765")
         return f"{scheme}://{host}{path}"
+
+
+def load_sources() -> list:
+    if not SOURCES_PATH.exists():
+        return []
+    try:
+        data = json.loads(SOURCES_PATH.read_text())
+    except json.JSONDecodeError:
+        return []
+    return data if isinstance(data, list) else []
+
+
+def save_sources(sources: list) -> None:
+    SOURCES_PATH.write_text(json.dumps(sources, ensure_ascii=False, indent=2) + "\n")
 
 
 def source_note(use_sample: bool, count: int) -> str:
