@@ -25,6 +25,8 @@ const elements = {
   sourceStatus: $("sourceStatus"),
   sourceNote: $("sourceNote"),
   modeBadge: $("modeBadge"),
+  refreshMonitoring: $("refreshMonitoring"),
+  monitoringList: $("monitoringList"),
 };
 
 const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
@@ -105,6 +107,22 @@ async function loadEvents() {
   }
 }
 
+async function loadMonitoring() {
+  if (!elements.monitoringList) return;
+  elements.refreshMonitoring.disabled = true;
+  try {
+    const response = await fetch("/api/import-status");
+    const payload = await response.json();
+    if (!payload.ok) throw new Error(payload.error || "Monitoring konnte nicht geladen werden.");
+    renderMonitoring(payload.sources || []);
+  } catch (error) {
+    elements.monitoringList.innerHTML = `<div class="empty-small">Monitoring nicht verfügbar.</div>`;
+    toast(error.message, true);
+  } finally {
+    elements.refreshMonitoring.disabled = false;
+  }
+}
+
 function setBusy(isBusy) {
   elements.refreshButton.disabled = isBusy;
   elements.appleButton.disabled = isBusy;
@@ -174,6 +192,52 @@ function renderFavorites() {
   });
 }
 
+function renderMonitoring(sources) {
+  if (!sources.length) {
+    elements.monitoringList.innerHTML = `<div class="empty-small">Noch keine Importläufe.</div>`;
+    return;
+  }
+
+  elements.monitoringList.innerHTML = sources.map((source) => {
+    const status = String(source.status || "unknown");
+    const label = statusLabel(status);
+    const eventText = source.eventCount === null || source.eventCount === undefined
+      ? "keine Events"
+      : `${source.eventCount} Events`;
+    const finished = source.finishedAt ? formatDateTime(source.finishedAt) : "noch nie";
+    const detail = source.error || (source.warnings || []).join(" ") || eventText;
+    return `
+      <article class="monitoring-item" data-status="${escapeAttribute(status)}">
+        <div>
+          <strong>${escapeHtml(source.name || source.feedId)}</strong>
+          <span>${escapeHtml(finished)} · ${escapeHtml(eventText)}</span>
+        </div>
+        <div class="status-pill" data-status="${escapeAttribute(status)}">${escapeHtml(label)}</div>
+        <p>${escapeHtml(detail)}</p>
+      </article>
+    `;
+  }).join("");
+}
+
+function statusLabel(status) {
+  const labels = {
+    success: "OK",
+    warning: "Warnung",
+    error: "Fehler",
+    never_run: "Neu",
+  };
+  return labels[status] || "Unklar";
+}
+
+function formatDateTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("de-DE", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date);
+}
+
 function toggleFavorite(team) {
   if (!team) return;
   if (state.favorites.includes(team)) {
@@ -230,6 +294,7 @@ function toast(message, isError = false) {
 elements.liveMode.addEventListener("click", () => setMode(false));
 elements.sampleMode.addEventListener("click", () => setMode(true));
 elements.refreshButton.addEventListener("click", loadEvents);
+elements.refreshMonitoring.addEventListener("click", loadMonitoring);
 elements.themeToggle.addEventListener("click", toggleTheme);
 elements.appleButton.addEventListener("click", openAppleCalendar);
 elements.copyFeedButton.addEventListener("click", copyFeedLink);
@@ -252,3 +317,4 @@ applyTheme();
 renderFavorites();
 updateFeedLinks();
 loadEvents();
+loadMonitoring();

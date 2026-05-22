@@ -33,6 +33,7 @@ ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
 OUTPUT_PATH = ROOT / DEFAULT_OUTPUT
 FEED_CACHE_DIR = ROOT / "output" / "feeds"
+IMPORT_RUNS_PATH = ROOT / "output" / "import-runs.json"
 CALENDAR_NAME = "YourCalendar German Football"
 SAMPLE_CALENDAR_NAME = "YourCalendar Sample Football"
 HOLIDAY_CALENDAR_NAME = "YourCalendar German Holidays"
@@ -302,6 +303,9 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/calendars":
             self.handle_calendars()
             return
+        if parsed.path == "/api/import-status":
+            self.handle_import_status()
+            return
         if parsed.path == "/api/open-apple":
             self.handle_open_apple(parsed.query)
             return
@@ -392,6 +396,16 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
             for calendar in PUBLISHED_CALENDARS.values()
         ]
         self.send_json({"ok": True, "calendars": calendars})
+
+    def handle_import_status(self) -> None:
+        runs = load_import_runs()
+        self.send_json(
+            {
+                "ok": True,
+                "sources": build_import_status(runs),
+                "runs": runs[-20:],
+            }
+        )
 
     def handle_leagues(self, query: str) -> None:
         params = parse_qs(query)
@@ -588,6 +602,55 @@ def load_sources() -> list:
     except json.JSONDecodeError:
         return []
     return data if isinstance(data, list) else []
+
+
+def load_import_runs() -> list[dict]:
+    if not IMPORT_RUNS_PATH.exists():
+        return []
+    try:
+        data = json.loads(IMPORT_RUNS_PATH.read_text())
+    except json.JSONDecodeError:
+        return []
+    return data if isinstance(data, list) else []
+
+
+def build_import_status(runs: list[dict]) -> list[dict]:
+    latest_by_feed: dict[str, dict] = {}
+    for run in reversed(runs):
+        feed_id = str(run.get("feedId") or "")
+        if feed_id and feed_id not in latest_by_feed:
+            latest_by_feed[feed_id] = run
+
+    statuses = []
+    for feed_id, calendar in PUBLISHED_CALENDARS.items():
+        latest = latest_by_feed.get(feed_id)
+        if not latest:
+            statuses.append(
+                {
+                    "feedId": feed_id,
+                    "name": calendar.name,
+                    "status": "never_run",
+                    "eventCount": None,
+                    "finishedAt": None,
+                    "warnings": [],
+                    "error": None,
+                    "sample": calendar.sample,
+                }
+            )
+            continue
+        statuses.append(
+            {
+                "feedId": feed_id,
+                "name": calendar.name,
+                "status": latest.get("status") or "unknown",
+                "eventCount": latest.get("eventCount"),
+                "finishedAt": latest.get("finishedAt"),
+                "warnings": latest.get("warnings") or [],
+                "error": latest.get("error"),
+                "sample": latest.get("sample"),
+            }
+        )
+    return statuses
 
 
 def save_sources(sources: list) -> None:

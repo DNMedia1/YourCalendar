@@ -123,6 +123,75 @@ h3 { font-size: 18px; }
   background: color-mix(in srgb, var(--panel) 78%, var(--bg));
 }
 
+.monitoring-panel {
+  gap: 12px;
+}
+
+.monitoring-list {
+  display: grid;
+  gap: 10px;
+}
+
+.monitoring-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel) 86%, var(--bg));
+}
+
+.monitoring-item strong,
+.monitoring-item span,
+.monitoring-item p {
+  min-width: 0;
+}
+
+.monitoring-item strong {
+  display: block;
+  font-size: 14px;
+}
+
+.monitoring-item span,
+.monitoring-item p {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.monitoring-item p {
+  grid-column: 1 / -1;
+}
+
+.status-pill {
+  align-self: start;
+  min-width: 58px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.status-pill[data-status="success"] {
+  border-color: color-mix(in srgb, var(--primary) 52%, var(--line));
+  color: var(--primary-strong);
+  background: color-mix(in srgb, var(--primary) 12%, var(--panel));
+}
+
+.status-pill[data-status="warning"] {
+  border-color: color-mix(in srgb, var(--accent) 62%, var(--line));
+  color: #755700;
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+}
+
+.status-pill[data-status="error"] {
+  border-color: color-mix(in srgb, var(--danger) 52%, var(--line));
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--panel));
+}
+
 .panel-head {
   display: flex;
   align-items: center;
