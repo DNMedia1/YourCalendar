@@ -10,6 +10,7 @@ from web_app import (
     CURRENT_FEED_ID,
     PUBLISHED_CALENDARS,
     build_source,
+    build_import_status,
     feed_filename,
     feed_path_for_params,
     normalize_feed_params,
@@ -99,6 +100,41 @@ class SourceApiTests(unittest.TestCase):
 
         self.assertIsNone(source)
         self.assertEqual(error, "Missing required field: url")
+
+
+class ImportMonitoringTests(unittest.TestCase):
+    def test_build_import_status_uses_latest_run_per_published_feed(self) -> None:
+        statuses = build_import_status(
+            [
+                {
+                    "feedId": "football-germany",
+                    "status": "error",
+                    "eventCount": None,
+                    "finishedAt": "2026-05-22T07:00:00+00:00",
+                    "warnings": [],
+                    "error": "source unavailable",
+                    "sample": False,
+                },
+                {
+                    "feedId": "football-germany",
+                    "status": "success",
+                    "eventCount": 14,
+                    "finishedAt": "2026-05-22T08:00:00+00:00",
+                    "warnings": [],
+                    "error": None,
+                    "sample": False,
+                },
+            ]
+        )
+
+        football = next(status for status in statuses if status["feedId"] == "football-germany")
+        self.assertEqual(football["status"], "success")
+        self.assertEqual(football["eventCount"], 14)
+        self.assertIsNone(football["error"])
+
+        sample = next(status for status in statuses if status["feedId"] == "sample-ksc")
+        self.assertEqual(sample["status"], "never_run")
+        self.assertIsNone(sample["eventCount"])
 
 
 if __name__ == "__main__":
