@@ -49,6 +49,14 @@ class WebFeedTest(unittest.TestCase):
         self.assertIn("[SAMPLE]", ics)
         self.assertIn("CATEGORIES:sample", ics)
 
+    def test_published_holiday_feed_resolves_to_holiday_source(self) -> None:
+        calendar_name, params, is_sample = resolve_feed("holidays-germany", "")
+
+        self.assertEqual(calendar_name, "YourCalendar German Holidays")
+        self.assertEqual(params["source"], ["holidays"])
+        self.assertEqual(params["country"], ["DE"])
+        self.assertFalse(is_sample)
+
     def test_current_sample_feed_uses_query_params(self) -> None:
         calendar_name, params, is_sample = resolve_feed(
             CURRENT_FEED_ID,

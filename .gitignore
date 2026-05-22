@@ -5,6 +5,7 @@ __pycache__/
 *.pyc
 output/source-runs.json
 output/import-runs.json
+output/*.ics
 output/feeds/
 output/event-snapshots/
 output/event-changes/
