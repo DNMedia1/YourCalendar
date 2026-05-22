@@ -81,6 +81,7 @@ Published feed examples:
 
 ```text
 http://127.0.0.1:8765/feeds/football-germany.ics
+http://127.0.0.1:8765/feeds/holidays-germany.ics
 http://127.0.0.1:8765/feeds/sample-ksc.ics
 ```
 
@@ -121,7 +122,7 @@ commercial real-time provider with guaranteed update latency and SLA.
 
 ## Source
 
-The current POC uses TheSportsDB:
+The sports POC can use TheSportsDB:
 
 ```bash
 python3 yourcalendar_poc.py \
@@ -135,6 +136,22 @@ By default it uses the public demo key `123`. You can set your own key:
 ```bash
 THESPORTSDB_API_KEY=your_key python3 yourcalendar_poc.py --show-events
 ```
+
+The first safer MVP source spike uses public holidays via Nager.Date:
+
+```bash
+python3 yourcalendar_poc.py \
+  --source nager-holidays \
+  --holiday-year 2026 \
+  --holiday-country DE \
+  --max-events 10 \
+  --calendar-name "German Public Holidays" \
+  --show-events
+```
+
+See `docs/source-evaluation-holidays.md` for the source decision, risks and
+next steps. Nager.Date is useful for the PoC, but it is not treated as an
+official government source or final production provider.
 
 ## Known POC Problems
 

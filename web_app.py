@@ -21,6 +21,7 @@ from yourcalendar_poc import (
     POCError,
     build_sample_events,
     default_football_season,
+    fetch_nager_holiday_events,
     fetch_json_list,
     fetch_openligadb_multi_league_events,
     render_ics,
@@ -34,8 +35,21 @@ OUTPUT_PATH = ROOT / DEFAULT_OUTPUT
 FEED_CACHE_DIR = ROOT / "output" / "feeds"
 CALENDAR_NAME = "YourCalendar German Football"
 SAMPLE_CALENDAR_NAME = "YourCalendar Sample Football"
+HOLIDAY_CALENDAR_NAME = "YourCalendar German Holidays"
 CURRENT_FEED_ID = "current"
-FEED_PARAM_KEYS = ("sample", "leagues", "team", "favorites", "includePast", "season")
+FEED_PARAM_KEYS = (
+    "sample",
+    "source",
+    "leagues",
+    "team",
+    "favorites",
+    "includePast",
+    "season",
+    "country",
+    "subdivision",
+    "year",
+    "maxEvents",
+)
 
 
 @dataclass(frozen=True)
@@ -68,6 +82,16 @@ PUBLISHED_CALENDARS = {
             "includePast": "true",
         },
         sample=True,
+    ),
+    "holidays-germany": PublishedCalendar(
+        feed_id="holidays-germany",
+        name=HOLIDAY_CALENDAR_NAME,
+        description="Deutsche Feiertage aus dem Nager.Date PoC-Importer.",
+        params={
+            "sample": "false",
+            "source": "holidays",
+            "country": "DE",
+        },
     ),
 }
 
@@ -137,6 +161,8 @@ def params_from_calendar(calendar: PublishedCalendar) -> dict[str, list[str]]:
 
 
 def calendar_name_for_params(params: dict[str, list[str]]) -> str:
+    if params.get("source", [""])[0] == "holidays":
+        return HOLIDAY_CALENDAR_NAME
     return SAMPLE_CALENDAR_NAME if params.get("sample", ["false"])[0] == "true" else CALENDAR_NAME
 
 
@@ -190,6 +216,18 @@ def load_events(params: dict[str, list[str]]) -> list:
     use_sample = params.get("sample", ["false"])[0] == "true"
     if use_sample:
         return build_sample_events(DEFAULT_TIMEZONE)
+    if params.get("source", [""])[0] == "holidays":
+        year_raw = params.get("year", [""])[0]
+        max_events_raw = params.get("maxEvents", [""])[0]
+        year = int(year_raw) if year_raw.isdigit() else datetime.now(timezone.utc).year
+        max_events = int(max_events_raw) if max_events_raw.isdigit() else None
+        return fetch_nager_holiday_events(
+            year=year,
+            country_code=params.get("country", ["DE"])[0] or "DE",
+            subdivision=params.get("subdivision", [""])[0],
+            max_events=max_events,
+            tz_name=DEFAULT_TIMEZONE,
+        )
 
     leagues = selected_leagues(params)
     include_past = params.get("includePast", ["false"])[0] == "true"
@@ -314,6 +352,7 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
             normalized_params = normalize_feed_params(params)
             events = load_events(params)
             use_sample = normalized_params.get("sample", ["false"])[0] == "true"
+            source = normalized_params.get("source", ["football"])[0]
             feed_url = feed_path_for_params(normalized_params)
             self.send_json(
                 {
@@ -326,7 +365,7 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
                     "downloadUrl": feed_url,
                     "sampleFeedUrl": published_feed_path("sample-ksc"),
                     "publishedFeedUrl": published_feed_path("football-germany"),
-                    "sourceNote": source_note(use_sample, len(events)),
+                    "sourceNote": source_note(use_sample, source, len(events)),
                 }
             )
         except (POCError, ValueError) as exc:
@@ -555,9 +594,14 @@ def save_sources(sources: list) -> None:
     SOURCES_PATH.write_text(json.dumps(sources, ensure_ascii=False, indent=2) + "\n")
 
 
-def source_note(use_sample: bool, count: int) -> str:
+def source_note(use_sample: bool, source: str, count: int) -> str:
     if use_sample:
         return "Sample-Modus: Diese Termine sind Testdaten und keine echten Spiele."
+    if source == "holidays":
+        return (
+            "Nager.Date Feiertagsdaten für den PoC. "
+            "Nicht als amtliche Quelle oder finale Rechtsentscheidung behandeln."
+        )
     if count == 0:
         return (
             "OpenLigaDB liefert für diese Filter aktuell keine kommenden Termine. "
