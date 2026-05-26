@@ -188,6 +188,13 @@ source URLs, and data-quality notes.
 
 See `docs/event-model.md` for the current schema and validation rules.
 
+## Performance and Accessibility
+
+The current frontend quality baseline is documented in
+`docs/performance-accessibility-baseline.md`. It covers asset-size budgets,
+basic `axe-core` checks, accessible loading/empty states and the manual
+browser checks expected before larger UI merges.
+
 ## Next Technical Spikes
 
 1. Build a small football-data.org spike behind source configuration and
