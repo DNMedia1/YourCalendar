@@ -1,6 +1,6 @@
 # YourCalendar Project Backlog
 
-Stand: 2026-05-18
+Stand: 2026-05-26
 
 ## Zielbild
 
@@ -33,7 +33,7 @@ Das Kernprodukt ist zuerst eine Website mit abonnierbaren Kalendern. Eine App ka
 | iCalendar / ICS | Offener Standard | Einfach abonnierbar in Apple, Google, Outlook und vielen Apps | Update-Verhalten je Client unterschiedlich | Als MVP-Ausgabeformat festlegen | Dev |
 | CalDAV | Offener Standard | Breitere Kalenderkompatibilitaet | Aufwendiger als statische ICS-Feeds | Spaeter pruefen, nicht MVP-kritisch | DevOps |
 | Bundestag / DIP | Offizielle maschinenlesbare Schnittstelle vorhanden | Politik-/Gesetzgebungs-Kalender | Eignet sich eher fuer Vorgangs-/Dokumentdaten; Terminqualitaet pruefen | DIP API Proof-of-Concept | Dev |
-| Bundesliga / Fussball | Drittanbieter-APIs vorhanden; DFB/Kicker offiziell unklar | Hoher Nutzerwert | Lizenzen, Datenqualitaet, Live-Aenderungen, Kosten | Anbieter vergleichen: football-data.org, TheSportsDB, ggf. SportMonks/API-Football | Orga |
+| Bundesliga / Fussball | Provider-Matrix in `docs/source-evaluation-football.md` dokumentiert | Hoher Nutzerwert | Lizenzen, Datenqualitaet, Live-Aenderungen, Kosten | football-data.org als kleiner MVP-Spike; API-FOOTBALL/Sportmonks spaeter bezahlt testen | Orga |
 | UFC | Offizielle Website mit Schedule sichtbar; stabile oeffentliche API unklar | Kampfsport-Kalender | Datenrechte, Scraping-Risiko, Zeitzonen | Offizielle Partner-/Media-Moeglichkeiten pruefen | Orga |
 | Oktagon MMA | Unklar | DACH-relevanter Kampfsport | Offizielle API unbekannt | Kontakt/Partneransprache und Website-Struktur pruefen | Orga |
 | Festivals / Veranstaltungen | Ticketmaster, Eventbrite, PredictHQ u.a. APIs vorhanden | Breite Event-Abdeckung | Kosten, Region-Coverage, Weitergaberechte | 2-3 Anbieter fuer Deutschland/EU evaluieren | Orga |

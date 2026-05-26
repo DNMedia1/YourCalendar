@@ -153,6 +153,13 @@ See `docs/source-evaluation-holidays.md` for the source decision, risks and
 next steps. Nager.Date is useful for the PoC, but it is not treated as an
 official government source or final production provider.
 
+The football provider comparison for football-data.org, TheSportsDB,
+API-FOOTBALL/API-SPORTS, Sportmonks and OpenLigaDB is documented in
+`docs/source-evaluation-football.md`. Current recommendation: keep OpenLigaDB
+as POC/Fallback, use football-data.org for a small top-league MVP spike, and
+evaluate API-FOOTBALL or Sportmonks only when broader paid football coverage is
+really needed.
+
 ## Known POC Problems
 
 - On 2026-05-18, TheSportsDB returned zero upcoming KSC events for team ID
@@ -183,8 +190,10 @@ See `docs/event-model.md` for the current schema and validation rules.
 
 ## Next Technical Spikes
 
-1. Validate whether TheSportsDB is good enough for KSC.
-2. Compare it with football-data.org or a paid sports-data provider.
+1. Build a small football-data.org spike behind source configuration and
+   import monitoring.
+2. Validate whether API-FOOTBALL or Sportmonks is worth a paid trial for broad
+   coverage.
 3. Host `output/ksc.ics` locally or on a preview URL and test subscription
    refresh behavior in Google, Outlook, and Apple Calendar.
 4. Add an event database so deleted/postponed/rescheduled matches can be tracked
