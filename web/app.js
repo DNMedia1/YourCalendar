@@ -1,6 +1,7 @@
 const state = {
   sample: true,
   events: [],
+  sourceCandidates: [],
   favorites: JSON.parse(localStorage.getItem("yourcalendar:favorites") || "[]"),
   theme: localStorage.getItem("yourcalendar:theme") || "system",
 };
@@ -27,6 +28,10 @@ const elements = {
   modeBadge: $("modeBadge"),
   refreshMonitoring: $("refreshMonitoring"),
   monitoringList: $("monitoringList"),
+  sourceCandidateFilter: $("sourceCandidateFilter"),
+  includeRiskySources: $("includeRiskySources"),
+  sourceCandidateCount: $("sourceCandidateCount"),
+  sourceCandidateList: $("sourceCandidateList"),
 };
 
 const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
@@ -123,6 +128,26 @@ async function loadMonitoring() {
   }
 }
 
+async function loadSourceCandidates() {
+  if (!elements.sourceCandidateList) return;
+  elements.sourceCandidateList.innerHTML = `<div class="empty-small">API-Kandidaten werden geladen.</div>`;
+  try {
+    const query = new URLSearchParams({
+      includeRisky: String(elements.includeRiskySources.checked),
+    });
+    const response = await fetch(`/api/source-candidates?${query.toString()}`);
+    const payload = await response.json();
+    if (!payload.ok) throw new Error(payload.error || "API-Kandidaten konnten nicht geladen werden.");
+    state.sourceCandidates = payload.candidates || [];
+    renderSourceCandidates();
+  } catch (error) {
+    state.sourceCandidates = [];
+    elements.sourceCandidateCount.textContent = "0";
+    elements.sourceCandidateList.innerHTML = `<div class="empty-state">API-Kandidaten nicht verfügbar.</div>`;
+    toast(error.message, true);
+  }
+}
+
 function setBusy(isBusy) {
   elements.refreshButton.disabled = isBusy;
   elements.appleButton.disabled = isBusy;
@@ -135,6 +160,71 @@ function updateFeedLinks(payload = null) {
   const subscribeUrl = payload?.subscribeUrl || new URL(feedUrl, window.location.origin).toString();
   elements.downloadLink.href = feedUrl;
   elements.feedUrl.value = subscribeUrl;
+}
+
+function renderSourceCandidates() {
+  const filter = elements.sourceCandidateFilter.value.trim().toLowerCase();
+  const candidates = state.sourceCandidates.filter((candidate) => {
+    if (!filter) return true;
+    return [
+      candidate.name,
+      candidate.coverage,
+      candidate.endpointType,
+      candidate.license,
+      candidate.usageDecision,
+      ...(candidate.sports || []),
+    ].join(" ").toLowerCase().includes(filter);
+  });
+
+  elements.sourceCandidateCount.textContent = String(candidates.length);
+  if (!candidates.length) {
+    elements.sourceCandidateList.innerHTML = `<div class="empty-state">Keine passenden API-Kandidaten.</div>`;
+    return;
+  }
+
+  elements.sourceCandidateList.innerHTML = candidates.map((candidate) => {
+    const sourceUrl = candidate.repoUrl || candidate.docsUrl || candidate.baseUrl || "";
+    const links = [
+      candidate.repoUrl ? `<a href="${escapeAttribute(candidate.repoUrl)}" target="_blank" rel="noopener noreferrer">Repo</a>` : "",
+      candidate.docsUrl ? `<a href="${escapeAttribute(candidate.docsUrl)}" target="_blank" rel="noopener noreferrer">Docs</a>` : "",
+      candidate.baseUrl ? `<a href="${escapeAttribute(candidate.baseUrl)}" target="_blank" rel="noopener noreferrer">API</a>` : "",
+    ].filter(Boolean).join("");
+    const sports = (candidate.sports || []).slice(0, 6).map((sport) => `
+      <span class="source-sport">${escapeHtml(sport)}</span>
+    `).join("");
+    const extraSports = (candidate.sports || []).length > 6
+      ? `<span class="source-sport">+${candidate.sports.length - 6}</span>`
+      : "";
+
+    return `
+      <article class="source-candidate-card" data-risk="${escapeAttribute(candidate.riskLevel)}">
+        <div class="source-candidate-main">
+          <div>
+            <strong>${escapeHtml(candidate.name)}</strong>
+            <p>${escapeHtml(candidate.coverage)}</p>
+          </div>
+          <span class="risk-pill" data-risk="${escapeAttribute(candidate.riskLevel)}">${escapeHtml(riskLabel(candidate.riskLevel))}</span>
+        </div>
+        <div class="source-sports">${sports}${extraSports}</div>
+        <div class="source-candidate-meta">
+          <span>${escapeHtml(candidate.endpointType)}</span>
+          <span>${candidate.supportsLiveEvents ? "Live-fähig" : "Dataset/Recherche"}</span>
+          <span>${candidate.requiresApiKey ? "API-Key" : "Kein Key"}</span>
+        </div>
+        <p class="source-license">${escapeHtml(candidate.license)}</p>
+        <div class="source-links" aria-label="${escapeAttribute(candidate.name)} Links">${links || `<span>${escapeHtml(sourceUrl)}</span>`}</div>
+      </article>
+    `;
+  }).join("");
+}
+
+function riskLabel(risk) {
+  const labels = {
+    low: "niedrig",
+    medium: "prüfen",
+    high: "hoch",
+  };
+  return labels[risk] || "unklar";
 }
 
 function renderEvents() {
@@ -298,6 +388,8 @@ elements.refreshMonitoring.addEventListener("click", loadMonitoring);
 elements.themeToggle.addEventListener("click", toggleTheme);
 elements.appleButton.addEventListener("click", openAppleCalendar);
 elements.copyFeedButton.addEventListener("click", copyFeedLink);
+elements.sourceCandidateFilter.addEventListener("input", renderSourceCandidates);
+elements.includeRiskySources.addEventListener("change", loadSourceCandidates);
 elements.teamSearch.addEventListener("input", () => {
   window.clearTimeout(elements.teamSearch._timer);
   elements.teamSearch._timer = window.setTimeout(loadEvents, 250);
@@ -318,3 +410,4 @@ renderFavorites();
 updateFeedLinks();
 loadEvents();
 loadMonitoring();
+loadSourceCandidates();
