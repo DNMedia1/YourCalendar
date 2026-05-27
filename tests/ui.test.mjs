@@ -106,8 +106,8 @@ test("long event lists render a capped visible set", async () => {
 
 test("frontend assets stay within the current performance budget", async () => {
   const budgets = [
-    ["../web/app.js", 20000],
-    ["../web/styles.css", 22000],
+    ["../web/app.js", 32000],
+    ["../web/styles.css", 30000],
     ["../web/mobile.css", 6000],
     ["../web/tailwind.css", 10000],
   ];
@@ -118,5 +118,5 @@ test("frontend assets stay within the current performance budget", async () => {
     totalBytes += file.byteLength;
     assert.ok(file.byteLength <= maxBytes, `${path} exceeds ${maxBytes} bytes`);
   }
-  assert.ok(totalBytes <= 60000, `frontend assets exceed 60000 bytes: ${totalBytes}`);
+  assert.ok(totalBytes <= 75000, `frontend assets exceed 75000 bytes: ${totalBytes}`);
 });

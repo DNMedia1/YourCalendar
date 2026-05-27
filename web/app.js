@@ -165,6 +165,45 @@ async function loadMonitoring() {
   }
 }
 
+async function loadCalendars() {
+  if (!elements.calendarCatalog) return;
+  elements.catalogStatus.textContent = "Lädt";
+  elements.sourcePlanStatus.textContent = "Lädt";
+  elements.sourceMonitorStatus.textContent = "Lädt";
+  try {
+    const response = await fetch("/api/calendars");
+    const payload = await response.json();
+    if (!payload.ok) throw new Error(payload.error || "Kalenderkatalog konnte nicht geladen werden.");
+
+    state.categories = Array.isArray(payload.categories) ? payload.categories : [];
+    state.qualityLegend = Array.isArray(payload.qualityLegend) ? payload.qualityLegend : [];
+    state.sportsCoverage = payload.sportsCoverage || { europeSports: [], globalCombatSports: [], championships: [] };
+    state.sourcePlan = payload.sourcePlan || { total: 0, active: 0, needsWork: 0, items: [] };
+    state.sourceMonitor = payload.sourceMonitor || { total: 0, watching: 0, planned: 0, items: [] };
+
+    if (!state.categories.some((category) => category.id === state.selectedCategoryId)) {
+      state.selectedCategoryId = state.categories[0]?.id || "";
+    }
+    if (!coverageOptionById(state.selectedCoverageId)) {
+      state.selectedCoverageId = allCoverageOptions()[0]?.id || "";
+    }
+
+    renderCalendarDiscovery();
+    const calendarCount = state.categories.reduce((total, category) => total + (category.calendars || []).length, 0);
+    elements.catalogStatus.textContent = `${calendarCount} Kalender`;
+    elements.sourcePlanStatus.textContent = `${state.sourcePlan.active || 0} aktiv · ${state.sourcePlan.needsWork || 0} offen`;
+    elements.sourceMonitorStatus.textContent = `${state.sourceMonitor.watching || 0} beobachtet · ${state.sourceMonitor.planned || 0} geplant`;
+  } catch (error) {
+    state.categories = [];
+    renderCalendarDiscovery();
+    elements.catalogStatus.textContent = "Fehler";
+    elements.sourcePlanStatus.textContent = "Nicht verfügbar";
+    elements.sourceMonitorStatus.textContent = "Nicht verfügbar";
+    elements.calendarCatalog.innerHTML = `<div class="catalog-empty" role="status"><p>Kalenderkatalog nicht verfügbar.</p></div>`;
+    toast(error.message, true);
+  }
+}
+
 async function loadSourceCandidates() {
   if (!elements.sourceCandidateList) return;
   elements.sourceCandidateList.innerHTML = `<div class="empty-small">API-Kandidaten werden geladen.</div>`;
@@ -203,10 +242,270 @@ function updateFeedLinks(payload = null) {
   elements.feedUrl.value = subscribeUrl;
 }
 
+function applySourceHealth(sourceHealth = null, fallbackLabel = "Bereit") {
+  const health = sourceHealth || {
+    status: "unknown",
+    label: fallbackLabel,
+    title: fallbackLabel,
+    detail: "Noch kein Quellenstatus verfügbar.",
+    hints: [],
+  };
+  state.sourceHealth = health;
+  elements.sourceStatus.textContent = health.label || fallbackLabel;
+  elements.sourceStatus.dataset.status = health.status || "unknown";
+  elements.sourceNote.textContent = health.detail || "";
+  elements.modeBadge.textContent = health.label || fallbackLabel;
+  elements.modeBadge.dataset.status = health.status || "unknown";
+}
+
+function renderCalendarDiscovery() {
+  renderQualityLegend();
+  renderSportsCoverage();
+  renderCoverageDetail();
+  renderSourcePlan();
+  renderSourceMonitor();
+  renderCategoryTabs();
+  renderCalendarCatalog();
+}
+
+function renderQualityLegend() {
+  if (!elements.qualityLegend) return;
+  if (!state.qualityLegend.length) {
+    elements.qualityLegend.innerHTML = `<div class="empty-small" role="status">Keine Qualitätsstufen geladen.</div>`;
+    return;
+  }
+
+  elements.qualityLegend.innerHTML = state.qualityLegend.map((item) => `
+    <div class="legend-item">
+      <strong>${escapeHtml(item.label)}</strong>
+      <span>${escapeHtml(item.description)}</span>
+    </div>
+  `).join("");
+}
+
+function coverageGroups() {
+  return [
+    ["Europäische Sportarten", state.sportsCoverage.europeSports || []],
+    ["Kampfsport weltweit", state.sportsCoverage.globalCombatSports || []],
+    ["WM & EM", state.sportsCoverage.championships || []],
+  ];
+}
+
+function allCoverageOptions() {
+  return coverageGroups().flatMap(([, options]) => options);
+}
+
+function coverageOptionById(id) {
+  return allCoverageOptions().find((option) => option.id === id);
+}
+
+function renderSportsCoverage() {
+  if (!elements.sportsCoverage) return;
+  const groups = coverageGroups().filter(([, options]) => options.length);
+  if (!groups.length) {
+    elements.sportsCoverage.innerHTML = `<div class="empty-small" role="status">Keine Sportarten geladen.</div>`;
+    return;
+  }
+
+  elements.sportsCoverage.innerHTML = groups.map(([label, options]) => `
+    <div class="coverage-group">
+      <strong>${escapeHtml(label)}</strong>
+      <div class="coverage-options">
+        ${options.map((option) => `
+          <button class="coverage-chip${option.id === state.selectedCoverageId ? " active" : ""}" type="button" data-coverage-id="${escapeAttribute(option.id)}" aria-pressed="${option.id === state.selectedCoverageId}">
+            ${escapeHtml(option.name)}
+          </button>
+        `).join("")}
+      </div>
+    </div>
+  `).join("");
+
+  document.querySelectorAll(".coverage-chip").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedCoverageId = button.dataset.coverageId;
+      renderSportsCoverage();
+      renderCoverageDetail();
+    });
+  });
+}
+
+function renderCoverageDetail() {
+  if (!elements.coverageDetail) return;
+  const option = coverageOptionById(state.selectedCoverageId);
+  if (!option) {
+    elements.coverageDetail.innerHTML = `<p role="status">Keine Sportart ausgewählt.</p>`;
+    return;
+  }
+
+  elements.coverageDetail.innerHTML = `
+    <div>
+      <span>${escapeHtml(option.scope)} · ${escapeHtml(option.group)}</span>
+      <strong>${escapeHtml(option.name)}</strong>
+    </div>
+    <p>${escapeHtml(option.description)}</p>
+    <em>${escapeHtml(option.statusLabel)} · ${escapeHtml(option.sourceNote)}</em>
+  `;
+}
+
+function renderSourcePlan() {
+  if (!elements.sourcePlan) return;
+  const items = state.sourcePlan.items || [];
+  if (!items.length) {
+    elements.sourcePlan.innerHTML = `<div class="empty-small" role="status">Keine Provider-Pläne geladen.</div>`;
+    return;
+  }
+
+  elements.sourcePlan.innerHTML = items.map((item) => `
+    <article class="source-plan-card">
+      <div class="source-plan-card-head">
+        <div>
+          <span>${escapeHtml(item.priority)} · ${escapeHtml(item.scope)}</span>
+          <strong>${escapeHtml(item.title)}</strong>
+        </div>
+        <em class="${escapeAttribute(item.status)}">${escapeHtml(item.statusLabel)}</em>
+      </div>
+      <p>${escapeHtml(item.summary)}</p>
+      <div class="source-plan-columns">
+        <div>
+          <span>Nächste Schritte</span>
+          <ul>${renderListItems(item.nextSteps, "Noch nicht definiert.")}</ul>
+        </div>
+        <div>
+          <span>Blocker</span>
+          <ul>${renderListItems(item.blockers, "Keine Blocker erfasst.")}</ul>
+        </div>
+      </div>
+    </article>
+  `).join("");
+}
+
+function renderSourceMonitor() {
+  if (!elements.sourceMonitor) return;
+  const items = state.sourceMonitor.items || [];
+  if (!items.length) {
+    elements.sourceMonitor.innerHTML = `<div class="empty-small" role="status">Keine Quellenüberwachung geladen.</div>`;
+    return;
+  }
+
+  elements.sourceMonitor.innerHTML = items.map((item) => {
+    const lastRun = item.lastRun || {};
+    return `
+      <article class="source-monitor-card">
+        <div class="source-monitor-card-head">
+          <div>
+            <span>${escapeHtml(item.scope)}</span>
+            <strong>${escapeHtml(item.sourceLabel)}</strong>
+          </div>
+          <em class="${escapeAttribute(item.status)}">${escapeHtml(item.statusLabel)}</em>
+        </div>
+        <p>${escapeHtml(item.message)}</p>
+        <dl>
+          <div>
+            <dt>Modus</dt>
+            <dd>${escapeHtml(item.lastCheckedMode)}</dd>
+          </div>
+          <div>
+            <dt>Events</dt>
+            <dd>${escapeHtml(lastRun.eventCount ?? item.eventCountLabel)}</dd>
+          </div>
+        </dl>
+        <small>${escapeHtml(lastRun.message || item.nextAction)}</small>
+      </article>
+    `;
+  }).join("");
+}
+
+function renderListItems(items = [], emptyText) {
+  const itemsToRender = items.slice(0, 3);
+  if (!itemsToRender.length) return `<li>${escapeHtml(emptyText)}</li>`;
+  return itemsToRender.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+}
+
+function renderCategoryTabs() {
+  if (!elements.categoryTabs) return;
+  if (!state.categories.length) {
+    elements.categoryTabs.innerHTML = "";
+    return;
+  }
+
+  elements.categoryTabs.innerHTML = state.categories.map((category) => `
+    <button class="category-tab${category.id === state.selectedCategoryId ? " active" : ""}" type="button" role="tab" data-category-id="${escapeAttribute(category.id)}" aria-selected="${category.id === state.selectedCategoryId}">
+      ${escapeHtml(category.name)} <strong>${category.calendarCount || 0}</strong>
+    </button>
+  `).join("");
+
+  document.querySelectorAll(".category-tab").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedCategoryId = button.dataset.categoryId;
+      renderCategoryTabs();
+      renderCalendarCatalog();
+    });
+  });
+}
+
+function renderCalendarCatalog() {
+  if (!elements.calendarCatalog) return;
+  const category = state.categories.find((item) => item.id === state.selectedCategoryId);
+  if (!category) {
+    elements.calendarCatalog.innerHTML = `<div class="catalog-empty" role="status"><p>Keine Kalenderkategorie geladen.</p></div>`;
+    return;
+  }
+  const calendars = category.calendars || [];
+  if (!calendars.length) {
+    elements.calendarCatalog.innerHTML = `
+      <div class="catalog-empty" role="status">
+        <span>${escapeHtml(category.name)}</span>
+        <p>${escapeHtml(category.description)} Für diese Kategorie ist noch kein abonnierbarer Feed veröffentlicht.</p>
+      </div>
+    `;
+    return;
+  }
+
+  elements.calendarCatalog.innerHTML = calendars.map((calendar) => `
+    <article class="calendar-card">
+      <div class="calendar-card-main">
+        <div>
+          <span class="calendar-category">${escapeHtml(category.name)}</span>
+          <h4>${escapeHtml(calendar.name)}</h4>
+        </div>
+        <span class="status-pill ${escapeAttribute(calendar.quality?.level || calendar.status)}">${escapeHtml(calendar.statusLabel)}</span>
+      </div>
+      <p>${escapeHtml(calendar.description)}</p>
+      <div class="source-row">
+        <span>Quelle</span>
+        <strong>${escapeHtml(calendar.sourceLabel)}</strong>
+      </div>
+      <div class="quality-grid">
+        <div>
+          <span>Qualität</span>
+          <strong>${escapeHtml(calendar.quality?.label)}</strong>
+          <small>${escapeHtml(calendar.quality?.reliabilityNote)}</small>
+        </div>
+        <div>
+          <span>Aktualisierung</span>
+          <strong>${escapeHtml(calendar.quality?.updatedLabel)}</strong>
+          <small>${escapeHtml(calendar.quality?.updatePolicy)}</small>
+        </div>
+      </div>
+      <ul class="quality-notes">${renderListItems(calendar.quality?.warnings, "Keine Warnhinweise erfasst.")}</ul>
+      <div class="calendar-actions">
+        ${calendar.hasFeed ? `
+          <a class="button secondary" href="${escapeAttribute(calendar.feedUrl)}">ICS laden</a>
+          <button class="button primary copy-calendar" type="button" data-subscribe-url="${escapeAttribute(calendar.subscribeUrl)}">Abo-Link kopieren</button>
+        ` : `<span class="action-note">Noch kein abonnierbarer Feed.</span>`}
+      </div>
+    </article>
+  `).join("");
+
+  document.querySelectorAll(".copy-calendar").forEach((button) => {
+    button.addEventListener("click", () => copyText(button.dataset.subscribeUrl, "Abo-Link kopiert."));
+  });
+}
+
 function renderSourceCandidates() {
-  const filter = elements.sourceCandidateFilter.value.trim().toLowerCase();
+  const searchTerm = elements.sourceCandidateFilter.value.trim().toLowerCase();
   const candidates = state.sourceCandidates.filter((candidate) => {
-    if (!filter) return true;
+    if (!searchTerm) return true;
     return [
       candidate.name,
       candidate.coverage,
@@ -214,7 +513,7 @@ function renderSourceCandidates() {
       candidate.license,
       candidate.usageDecision,
       ...(candidate.sports || []),
-    ].join(" ").toLowerCase().includes(filter);
+    ].join(" ").toLowerCase().includes(searchTerm);
   });
 
   elements.sourceCandidateCount.textContent = String(candidates.length);
@@ -428,14 +727,6 @@ function toast(message, isError = false) {
   node.textContent = message;
   document.body.appendChild(node);
   setTimeout(() => node.remove(), 3600);
-}
-
-function escapeHtml(value) {
-  return String(value || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
 }
 
 elements.liveMode.addEventListener("click", () => setMode(false));
