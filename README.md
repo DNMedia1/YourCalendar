@@ -212,6 +212,14 @@ The current frontend quality baseline is documented in
 basic `axe-core` checks, accessible loading/empty states and the manual
 browser checks expected before larger UI merges.
 
+## Agent Collaboration
+
+Codex, Claude Code and other agents share the repo-owned workflow in
+`AGENTS.md`, `CLAUDE.md`, `docs/agent-collaboration.md` and
+`docs/agent-status.md`. GitHub Issues and the GitHub Project Board remain the
+planning source of truth. Local knowledge-base snapshots under `.claude/` or
+`.snapshots/.claude/knowledge_base/` stay private and must not be committed.
+
 ## Next Technical Spikes
 
 1. Build a small football-data.org spike behind source configuration and
