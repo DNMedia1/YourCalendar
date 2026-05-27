@@ -86,6 +86,20 @@ class ImportJobTests(unittest.TestCase):
         self.assertEqual(len(results), 1)
         self.assertEqual(import_jobs.load_import_runs(), results)
 
+    def test_default_import_job_skips_planned_calendars(self) -> None:
+        called_feed_ids: list[str] = []
+
+        def renderer(feed_id: str):
+            called_feed_ids.append(feed_id)
+            return ICS_WITH_EVENT, False
+
+        results = import_jobs.run_import_job(renderer=renderer)
+
+        self.assertTrue(results)
+        self.assertNotIn("europe-all-sports", called_feed_ids)
+        self.assertNotIn("global-combat-events", called_feed_ids)
+        self.assertNotIn("world-europe-championships", called_feed_ids)
+
 
 if __name__ == "__main__":
     unittest.main()

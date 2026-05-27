@@ -38,6 +38,7 @@ WEB_ROOT = ROOT / "web"
 OUTPUT_PATH = ROOT / DEFAULT_OUTPUT
 FEED_CACHE_DIR = ROOT / "output" / "feeds"
 IMPORT_RUNS_PATH = ROOT / "output" / "import-runs.json"
+RUN_HISTORY_PATH = ROOT / "output" / "source-runs.json"
 CALENDAR_NAME = "YourCalendar German Football"
 SAMPLE_CALENDAR_NAME = "YourCalendar Sample Football"
 HOLIDAY_CALENDAR_NAME = "YourCalendar German Holidays"
@@ -250,13 +251,79 @@ PUBLISHED_CALENDARS = {
     ),
     "holidays-germany": PublishedCalendar(
         feed_id="holidays-germany",
+        category_id="holidays",
         name=HOLIDAY_CALENDAR_NAME,
         description="Deutsche Feiertage aus dem Nager.Date PoC-Importer.",
+        source_label="Nager.Date, Community-Daten",
+        source_type="community",
+        source_type_label="Community-Quelle",
+        quality_level="community",
+        quality_label="Community, kein SLA",
+        update_policy="Der Feed lädt Feiertagsdaten beim Abruf neu aus Nager.Date.",
+        reliability_note="Nager.Date ist für den POC nützlich, aber keine amtliche Rechtsquelle.",
+        data_warnings=(
+            "Feiertage und regionale Abweichungen vor produktiver Nutzung prüfen.",
+            "Nicht als amtliche Quelle oder Rechtsberatung verwenden.",
+        ),
         params={
             "sample": "false",
             "source": "holidays",
             "country": "DE",
         },
+    ),
+    "europe-all-sports": PublishedCalendar(
+        feed_id="europe-all-sports",
+        category_id="sports",
+        name="Alle Sportarten in Europa",
+        description="Zielkalender für die vollständige Sportarten-Auswahl in Europa.",
+        source_label="Noch kein Multi-Sport-Provider angebunden",
+        source_type="planned",
+        source_type_label="Geplante Quelle",
+        quality_level="planned",
+        quality_label="Provider nötig",
+        update_policy="Wird nach Provider-Auswahl als abonnierbarer Kalender aktiviert.",
+        reliability_note="Ohne belastbare Provider-Taxonomie kann Vollständigkeit noch nicht zugesagt werden.",
+        data_warnings=(
+            "Aktuell nur als Produktziel sichtbar.",
+            "Coverage, Nutzungsrechte und Update-Latenz müssen je Provider geprüft werden.",
+        ),
+        params=None,
+    ),
+    "global-combat-events": PublishedCalendar(
+        feed_id="global-combat-events",
+        category_id="combat",
+        name="Weltweite Kampfsportveranstaltungen",
+        description="Geplanter Kalender für MMA, Boxen, Kickboxen, Grappling und weitere Kampfsportarten.",
+        source_label="Noch kein globaler Kampfsport-Provider angebunden",
+        source_type="planned",
+        source_type_label="Geplante Quelle",
+        quality_level="planned",
+        quality_label="Provider nötig",
+        update_policy="Wird nach lizenzsicherer Quellenstrategie als abonnierbarer Kalender aktiviert.",
+        reliability_note="Weltweite Kampfsportveranstaltungen benötigen geprüfte Quellen, weil Fight Cards kurzfristig wechseln.",
+        data_warnings=(
+            "Aktuell nur als Produktziel sichtbar.",
+            "Fight Cards, Zeitzonen, Absagen und Gegnerwechsel brauchen eigene Qualitätsregeln.",
+        ),
+        params=None,
+    ),
+    "world-europe-championships": PublishedCalendar(
+        feed_id="world-europe-championships",
+        category_id="sports",
+        name="WM & EM je Sportart",
+        description="Geplanter Kalender für laufende und bevorstehende Welt- und Europameisterschaften.",
+        source_label="Noch keine Turnier-Erkennung angebunden",
+        source_type="planned",
+        source_type_label="Geplante Quelle",
+        quality_level="planned",
+        quality_label="Provider nötig",
+        update_policy="Wird nach Turniermodell und erster Provider-Anbindung aktiviert.",
+        reliability_note="WM/EM-Begriffe müssen je Sportart, Verband, Altersklasse und Turnierphase sauber getrennt werden.",
+        data_warnings=(
+            "Aktuell nur als Produktziel sichtbar.",
+            "Mehrdeutige Turniere dürfen nicht automatisch als offizielle WM oder EM behauptet werden.",
+        ),
+        params=None,
     ),
 }
 
@@ -540,6 +607,138 @@ def load_events(params: dict[str, list[str]]) -> list:
             if any(favorite in event.title.casefold() for favorite in favorites)
         ]
     return events
+
+
+def source_health_payload(
+    use_sample: bool,
+    count: int,
+    params: dict[str, list[str]],
+    error: str | None = None,
+    checked_at: datetime | None = None,
+) -> dict:
+    checked = catalog_timestamp(checked_at)
+    source = params.get("source", ["football"])[0]
+    source_id = "yourcalendar-sample" if use_sample else "openligadb-football"
+    if source == "holidays" and not use_sample:
+        source_id = "nager-date-holidays"
+
+    monitor_observation = {
+        "sourceId": source_id,
+        "checkedAt": checked.isoformat(),
+        "checkedLabel": f"Geprüft {format_catalog_timestamp(checked)}",
+        "eventCount": count,
+    }
+
+    if use_sample:
+        return {
+            "status": "sample",
+            "label": "Sample",
+            "title": "Sample-Daten aktiv",
+            "detail": "Diese Termine sind Testdaten und keine echten Spiele.",
+            "hints": ["Zum Prüfen der echten Quelle in den Live-Modus wechseln."],
+            "selectedLeagues": selected_league_names(params),
+            "monitorObservation": {
+                **monitor_observation,
+                "status": "ok",
+                "message": "Sample-Daten wurden lokal erzeugt.",
+            },
+        }
+
+    if error:
+        title = "Nager.Date konnte nicht gelesen werden" if source == "holidays" else "OpenLigaDB konnte nicht gelesen werden"
+        return {
+            "status": "error",
+            "label": "Quelle gestört",
+            "title": title,
+            "detail": "Der Kalender bleibt verfügbar, aber dieser Abruf hat keine verlässlichen Live-Daten geliefert.",
+            "hints": [
+                "Netzwerk, API-Erreichbarkeit und Filter prüfen.",
+                "Sample-Modus nutzen, wenn nur der Abo-Flow getestet werden soll.",
+            ],
+            "selectedLeagues": selected_league_names(params),
+            "technicalDetail": error,
+            "monitorObservation": {
+                **monitor_observation,
+                "status": "error",
+                "message": f"Der Abruf für {source_id} ist fehlgeschlagen.",
+                "technicalDetail": error,
+            },
+        }
+
+    if source == "holidays":
+        status = "ok" if count else "empty"
+        return {
+            "status": status,
+            "label": "Nager.Date" if count else "Keine Feiertage",
+            "title": "Nager.Date liefert Feiertage" if count else "Keine Feiertage für diese Auswahl",
+            "detail": source_note(False, "holidays", count),
+            "hints": [
+                "Feiertage und regionale Abweichungen vor produktiver Nutzung prüfen.",
+                "Nicht als amtliche Quelle oder Rechtsberatung verwenden.",
+            ],
+            "selectedLeagues": [],
+            "monitorObservation": {
+                **monitor_observation,
+                "status": status,
+                "message": "Der Nager.Date-Abruf lieferte Feiertage." if count else "Der Nager.Date-Abruf lieferte keine Feiertage.",
+            },
+        }
+
+    if count == 0:
+        season = params.get("season", [""])[0] or str(default_football_season())
+        return {
+            "status": "empty",
+            "label": "Keine Termine",
+            "title": "Keine Spiele für diese Auswahl",
+            "detail": (
+                "OpenLigaDB hat für diese Ligen, Saison und Filter keine Termine geliefert. "
+                "Das kann bei Saisonende, noch nicht veröffentlichten Spielplänen oder engen Teamfiltern passieren."
+            ),
+            "hints": [
+                f"Geprüfte Saison: {season}.",
+                "Gespielte Spiele anzeigen oder Teamfilter leeren.",
+                "Andere Liga auswählen, falls der Wettbewerb noch nicht terminiert ist.",
+            ],
+            "selectedLeagues": selected_league_names(params),
+            "monitorObservation": {
+                **monitor_observation,
+                "status": "empty",
+                "message": "Der OpenLigaDB-Abruf war erreichbar, lieferte aber keine Termine.",
+            },
+        }
+
+    return {
+        "status": "ok",
+        "label": "OpenLigaDB",
+        "title": "OpenLigaDB liefert Termine",
+        "detail": (
+            "Freie Spielplan-/Ergebnisdaten für den POC. "
+            "Für garantierte Realtime-Daten braucht es später einen Provider mit SLA."
+        ),
+        "hints": [
+            "Anstoßzeiten und Verlegungen bleiben als POC-Qualitätsrisiko markiert.",
+        ],
+        "selectedLeagues": selected_league_names(params),
+        "monitorObservation": {
+            **monitor_observation,
+            "status": "ok",
+            "message": "Der OpenLigaDB-Abruf lieferte Termine.",
+        },
+    }
+
+
+def persist_monitor_observation(observation: dict) -> dict:
+    checked_at = datetime.fromisoformat(observation["checkedAt"])
+    record = SourceRunRecord(
+        source_id=observation["sourceId"],
+        status=observation["status"],
+        checked_at=checked_at,
+        checked_label=observation["checkedLabel"],
+        event_count=int(observation["eventCount"]),
+        message=observation["message"],
+        technical_detail=observation.get("technicalDetail"),
+    )
+    return record_source_run(RUN_HISTORY_PATH, record)
 
 
 SOURCES_PATH = ROOT / "sources.json"

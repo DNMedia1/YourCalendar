@@ -28,14 +28,16 @@ Die Node-Tests pruefen aktuell diese unkomprimierten Groessen:
 
 | Datei | Budget |
 | --- | ---: |
-| `web/app.js` | 20 KB |
-| `web/styles.css` | 22 KB |
+| `web/app.js` | 32 KB |
+| `web/styles.css` | 30 KB |
 | `web/mobile.css` | 6 KB |
 | `web/tailwind.css` | 10 KB |
-| Summe | 60 KB |
+| Summe | 75 KB |
 
 Diese Budgets sind keine finale Lighthouse-Grenze. Sie verhindern aber, dass
-das MVP unbemerkt grosse Framework- oder Asset-Last bekommt.
+das MVP unbemerkt grosse Framework- oder Asset-Last bekommt. Die Werte
+beruecksichtigen den gemergten Kalenderkatalog mit Sportarten-, Provider- und
+Quellenmonitor-Ansicht.
 
 ## Accessibility-Baseline
 

@@ -30,6 +30,14 @@ def feed_cache_path(feed_id: str) -> Path:
     return FEED_CACHE_DIR / feed_filename(feed_id)
 
 
+def importable_feed_ids() -> list[str]:
+    return [
+        feed_id
+        for feed_id, calendar in PUBLISHED_CALENDARS.items()
+        if calendar.params is not None
+    ]
+
+
 def event_snapshot_path(feed_id: str) -> Path:
     return EVENT_SNAPSHOT_DIR / f"{feed_id}.json"
 
@@ -125,7 +133,7 @@ def import_calendar(feed_id: str, renderer: RenderFeed = render_feed) -> dict:
 
 
 def run_import_job(feed_ids: list[str] | None = None, renderer: RenderFeed = render_feed) -> list[dict]:
-    selected_feed_ids = feed_ids or list(PUBLISHED_CALENDARS)
+    selected_feed_ids = feed_ids or importable_feed_ids()
     results = [import_calendar(feed_id, renderer) for feed_id in selected_feed_ids]
     append_import_runs(results)
     return results
@@ -136,7 +144,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--feed",
         action="append",
-        choices=sorted(PUBLISHED_CALENDARS),
+        choices=sorted(importable_feed_ids()),
         help="Published feed id to import. Can be passed multiple times. Defaults to all feeds.",
     )
     return parser
