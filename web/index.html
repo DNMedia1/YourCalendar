@@ -114,6 +114,25 @@
           </div>
           <div class="event-list" id="eventList" aria-live="polite" aria-busy="false"></div>
         </section>
+
+        <section class="source-candidates-area" aria-labelledby="sourceCandidatesTitle">
+          <div class="section-title">
+            <div>
+              <span class="eyebrow">Source Discovery</span>
+              <h3 id="sourceCandidatesTitle">API-Kandidaten</h3>
+            </div>
+            <span id="sourceCandidateCount">0</span>
+          </div>
+          <div class="source-tools">
+            <label class="sr-only" for="sourceCandidateFilter">API-Kandidaten filtern</label>
+            <input class="input" id="sourceCandidateFilter" type="search" placeholder="Sport, API oder Lizenz suchen" autocomplete="off" />
+            <label class="soft-check source-risk-toggle">
+              <input type="checkbox" id="includeRiskySources" checked />
+              <span>Risikoquellen anzeigen</span>
+            </label>
+          </div>
+          <div class="source-candidate-list" id="sourceCandidateList" aria-live="polite"></div>
+        </section>
       </section>
     </main>
     <script src="/app.js"></script>

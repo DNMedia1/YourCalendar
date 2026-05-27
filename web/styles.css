@@ -440,6 +440,134 @@ h3 { font-size: 18px; }
   overflow: hidden;
 }
 
+.source-candidates-area {
+  margin-top: 22px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.source-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 82%, var(--bg));
+}
+
+.source-risk-toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: var(--touch-target);
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 760;
+}
+
+.source-risk-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+.source-candidate-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px;
+}
+
+.source-candidate-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--panel) 80%, white) inset;
+}
+
+.source-candidate-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+}
+
+.source-candidate-main strong {
+  display: block;
+  font-size: 16px;
+}
+
+.source-candidate-main p,
+.source-license {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.source-sports,
+.source-candidate-meta,
+.source-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.source-sport,
+.source-candidate-meta span,
+.source-links a,
+.source-links span,
+.risk-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.source-sport {
+  color: var(--primary-strong);
+  background: color-mix(in srgb, var(--primary) 10%, var(--panel));
+}
+
+.source-candidate-meta span {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--bg) 68%, var(--panel));
+}
+
+.source-links a {
+  color: var(--primary-strong);
+  text-decoration: none;
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast), transform var(--motion-fast);
+}
+
+.source-links a:hover {
+  border-color: color-mix(in srgb, var(--primary) 42%, var(--line));
+  box-shadow: 0 8px 18px rgba(20, 39, 25, .10);
+}
+
+.risk-pill[data-risk="low"] {
+  color: var(--primary-strong);
+  background: color-mix(in srgb, var(--primary) 12%, var(--panel));
+}
+
+.risk-pill[data-risk="medium"] {
+  color: #755700;
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+}
+
+.risk-pill[data-risk="high"] {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--panel));
+}
+
 .section-title {
   display: flex;
   align-items: center;
@@ -449,7 +577,8 @@ h3 { font-size: 18px; }
   border-bottom: 1px solid var(--line);
 }
 
-#modeBadge {
+#modeBadge,
+#sourceCandidateCount {
   min-height: 28px;
   padding: 6px 10px;
   border-radius: 999px;
@@ -584,6 +713,14 @@ h3 { font-size: 18px; }
   }
 
   .subscription-row {
+    grid-template-columns: 1fr;
+  }
+
+  .source-tools {
+    grid-template-columns: 1fr;
+  }
+
+  .source-candidate-list {
     grid-template-columns: 1fr;
   }
 

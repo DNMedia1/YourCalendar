@@ -6,6 +6,7 @@ from pathlib import Path
 from urllib.parse import parse_qs
 
 import web_app
+from sports_source_registry import list_source_candidates, source_candidate_sports
 from web_app import (
     CURRENT_FEED_ID,
     PUBLISHED_CALENDARS,
@@ -100,6 +101,42 @@ class SourceApiTests(unittest.TestCase):
 
         self.assertIsNone(source)
         self.assertEqual(error, "Missing required field: url")
+
+
+class SourceCandidateRegistryTests(unittest.TestCase):
+    def test_registry_contains_multisport_and_combat_candidates(self) -> None:
+        candidate_ids = {candidate["id"] for candidate in list_source_candidates()}
+
+        self.assertIn("public-espn-api", candidate_ids)
+        self.assertIn("thesportsdb", candidate_ids)
+        self.assertIn("ufc-stats-api", candidate_ids)
+        self.assertIn("octagon-api", candidate_ids)
+
+    def test_registry_filters_by_sport(self) -> None:
+        mma_candidates = list_source_candidates(sport="mma")
+        candidate_ids = {candidate["id"] for candidate in mma_candidates}
+
+        self.assertIn("ufc-stats-api", candidate_ids)
+        self.assertIn("octagon-api", candidate_ids)
+        self.assertNotIn("openfootball-football-json", candidate_ids)
+
+    def test_registry_can_hide_high_risk_candidates(self) -> None:
+        safer_candidates = list_source_candidates(include_risky=False)
+        high_risk_ids = {
+            candidate["id"]
+            for candidate in list_source_candidates()
+            if candidate["riskLevel"] == "high"
+        }
+
+        self.assertTrue(high_risk_ids)
+        self.assertTrue(high_risk_ids.isdisjoint({candidate["id"] for candidate in safer_candidates}))
+
+    def test_registry_exposes_filter_sports(self) -> None:
+        sports = source_candidate_sports()
+
+        self.assertIn("football", sports)
+        self.assertIn("mma", sports)
+        self.assertIn("formula-1", sports)
 
 
 class ImportMonitoringTests(unittest.TestCase):

@@ -160,6 +160,23 @@ as POC/Fallback, use football-data.org for a small top-league MVP spike, and
 evaluate API-FOOTBALL or Sportmonks only when broader paid football coverage is
 really needed.
 
+## Community Sports Source Registry
+
+The app exposes a local research registry for broader sports data candidates:
+
+```text
+GET /api/source-candidates
+GET /api/source-candidates?sport=mma
+GET /api/source-candidates?includeRisky=false
+```
+
+The registry is intentionally separate from active imports. It lists GitHub
+repos, public APIs and datasets with risk labels, so experimental sources such
+as UFC/MMA scrapers are visible without becoming production dependencies.
+
+See `docs/source-evaluation-community-sports.md` for the current candidate
+matrix and next integration steps.
+
 ## Known POC Problems
 
 - On 2026-05-18, TheSportsDB returned zero upcoming KSC events for team ID

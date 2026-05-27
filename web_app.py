@@ -13,6 +13,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse
 
+from sports_source_registry import list_source_candidates, source_candidate_sports
 from yourcalendar_poc import (
     DEFAULT_OUTPUT,
     DEFAULT_TIMEZONE,
@@ -290,6 +291,9 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
         if parsed.path == "/api/sources":
             self.handle_sources_get()
             return
+        if parsed.path == "/api/source-candidates":
+            self.handle_source_candidates_get(parsed.query)
+            return
         if parsed.path.startswith("/api/sources/"):
             source_id = parsed.path.removeprefix("/api/sources/")
             self.handle_sources_get_one(source_id)
@@ -493,6 +497,24 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
         sources = load_sources()
         self.send_json({"ok": True, "sources": sources})
 
+    def handle_source_candidates_get(self, query: str) -> None:
+        params = parse_qs(query)
+        sport = params.get("sport", [""])[0].strip() or None
+        include_risky = parse_bool(params.get("includeRisky", ["true"])[0], default=True)
+        candidates = list_source_candidates(sport=sport, include_risky=include_risky)
+        self.send_json(
+            {
+                "ok": True,
+                "count": len(candidates),
+                "sports": source_candidate_sports(),
+                "candidates": candidates,
+                "note": (
+                    "Community registry only. Candidates are not active production imports "
+                    "until license, rate limit and reliability checks pass."
+                ),
+            }
+        )
+
     def handle_sources_get_one(self, source_id: str) -> None:
         sources = load_sources()
         for source in sources:
@@ -655,6 +677,17 @@ def build_import_status(runs: list[dict]) -> list[dict]:
 
 def save_sources(sources: list) -> None:
     SOURCES_PATH.write_text(json.dumps(sources, ensure_ascii=False, indent=2) + "\n")
+
+
+def parse_bool(value: str, default: bool = False) -> bool:
+    if value is None:
+        return default
+    normalized = str(value).strip().casefold()
+    if normalized in {"1", "true", "yes", "y", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "n", "off"}:
+        return False
+    return default
 
 
 def source_note(use_sample: bool, source: str, count: int) -> str:
