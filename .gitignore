@@ -14,7 +14,6 @@ sources.json
 node_modules/
 .storybook-home/
 storybook-static/
-CLAUDE.md
 settings.json
 .claude/
 .claude/settings.local.json
