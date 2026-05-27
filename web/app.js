@@ -1,5 +1,19 @@
 const state = {
   sample: true,
+  categories: [],
+  qualityLegend: [],
+  sportsCoverage: { europeSports: [], globalCombatSports: [], championships: [] },
+  sourcePlan: { total: 0, active: 0, needsWork: 0, items: [] },
+  sourceMonitor: { total: 0, watching: 0, planned: 0, items: [] },
+  sourceHealth: {
+    status: "sample",
+    label: "Sample",
+    title: "Sample-Daten aktiv",
+    detail: "Sample-Modus nutzt Testdaten.",
+    hints: [],
+  },
+  selectedCoverageId: "football",
+  selectedCategoryId: "sports",
   events: [],
   sourceCandidates: [],
   favorites: JSON.parse(localStorage.getItem("yourcalendar:favorites") || "[]"),
@@ -17,6 +31,16 @@ const elements = {
   copyFeedButton: $("copyFeedButton"),
   downloadLink: $("downloadLink"),
   feedUrl: $("feedUrl"),
+  catalogStatus: $("catalogStatus"),
+  qualityLegend: $("qualityLegend"),
+  sportsCoverage: $("sportsCoverage"),
+  coverageDetail: $("coverageDetail"),
+  sourcePlanStatus: $("sourcePlanStatus"),
+  sourcePlan: $("sourcePlan"),
+  sourceMonitorStatus: $("sourceMonitorStatus"),
+  sourceMonitor: $("sourceMonitor"),
+  categoryTabs: $("categoryTabs"),
+  calendarCatalog: $("calendarCatalog"),
   teamSearch: $("teamSearch"),
   includePast: $("includePast"),
   eventList: $("eventList"),
@@ -94,18 +118,29 @@ async function loadEvents() {
   try {
     const response = await fetch(`/api/events?${params().toString()}`);
     const payload = await response.json();
-    if (!payload.ok) throw new Error(payload.error || "Unbekannter Fehler");
+    if (!payload.ok) {
+      state.events = [];
+      applySourceHealth(payload.sourceHealth, "Quelle gestört");
+      updateFeedLinks();
+      renderEvents();
+      throw new Error(payload.error || payload.sourceNote || "Unbekannter Fehler");
+    }
     state.events = payload.events;
+    applySourceHealth(payload.sourceHealth, payload.mode === "sample" ? "Sample" : "OpenLigaDB");
     updateFeedLinks(payload);
-    elements.sourceStatus.textContent = payload.mode === "sample" ? "Sample" : "OpenLigaDB";
-    elements.sourceNote.textContent = payload.sourceNote;
-    elements.modeBadge.textContent = payload.mode === "sample" ? "Sample" : "Live";
     renderEvents();
   } catch (error) {
-    state.events = [];
+    if (!state.events.length && state.sourceHealth.status !== "error") {
+      state.events = [];
+      applySourceHealth({
+        status: "error",
+        label: "Quelle gestört",
+        title: "Abruf fehlgeschlagen",
+        detail: "Die Quelle konnte gerade nicht gelesen werden.",
+        hints: ["Netzwerk und lokalen Server prüfen."],
+      });
+    }
     updateFeedLinks();
-    elements.sourceStatus.textContent = "Fehler";
-    elements.sourceNote.textContent = error.message;
     renderEvents();
     toast(error.message, true);
   } finally {
@@ -370,12 +405,20 @@ async function openAppleCalendar() {
 }
 
 async function copyFeedLink() {
+  copyText(elements.feedUrl.value, "Feed-Link kopiert.");
+}
+
+async function copyText(value, successMessage) {
   try {
-    await navigator.clipboard.writeText(elements.feedUrl.value);
-    toast("Feed-Link kopiert.");
+    await navigator.clipboard.writeText(value);
+    toast(successMessage);
   } catch (error) {
-    elements.feedUrl.select();
-    toast("Link ist markiert und kann kopiert werden.");
+    if (value === elements.feedUrl.value) {
+      elements.feedUrl.select();
+      toast("Link ist markiert und kann kopiert werden.");
+      return;
+    }
+    toast("Link konnte nicht automatisch kopiert werden.", true);
   }
 }
 
@@ -385,6 +428,14 @@ function toast(message, isError = false) {
   node.textContent = message;
   document.body.appendChild(node);
   setTimeout(() => node.remove(), 3600);
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
 }
 
 elements.liveMode.addEventListener("click", () => setMode(false));
@@ -414,6 +465,7 @@ systemDark.addEventListener("change", () => {
 applyTheme();
 renderFavorites();
 updateFeedLinks();
+loadCalendars();
 loadEvents();
 loadMonitoring();
 loadSourceCandidates();
