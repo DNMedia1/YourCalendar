@@ -386,7 +386,7 @@ h3 { font-size: 18px; }
   padding: 18px 20px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fbfdfb;
+  background: color-mix(in srgb, var(--panel) 86%, var(--bg));
 }
 
 .subscription-row {
@@ -414,7 +414,7 @@ h3 { font-size: 18px; }
   padding: 6px 9px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: #fff;
+  background: var(--panel);
 }
 
 .metric {
@@ -538,7 +538,7 @@ h3 { font-size: 18px; }
 .list-note {
   padding: 14px 20px;
   border-top: 1px solid var(--line);
-  background: #f7faf7;
+  background: color-mix(in srgb, var(--panel) 76%, var(--bg));
   color: var(--muted);
   font-size: 14px;
 }

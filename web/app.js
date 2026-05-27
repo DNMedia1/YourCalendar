@@ -85,6 +85,7 @@ function params() {
 
 async function loadEvents() {
   setBusy(true);
+  setEventListBusy(true);
   try {
     const response = await fetch(`/api/events?${params().toString()}`);
     const payload = await response.json();
@@ -103,6 +104,7 @@ async function loadEvents() {
     renderEvents();
     toast(error.message, true);
   } finally {
+    setEventListBusy(false);
     setBusy(false);
   }
 }
@@ -116,7 +118,7 @@ async function loadMonitoring() {
     if (!payload.ok) throw new Error(payload.error || "Monitoring konnte nicht geladen werden.");
     renderMonitoring(payload.sources || []);
   } catch (error) {
-    elements.monitoringList.innerHTML = `<div class="empty-small">Monitoring nicht verfügbar.</div>`;
+    elements.monitoringList.innerHTML = `<div class="empty-small" role="status">Monitoring nicht verfügbar.</div>`;
     toast(error.message, true);
   } finally {
     elements.refreshMonitoring.disabled = false;
@@ -127,6 +129,10 @@ function setBusy(isBusy) {
   elements.refreshButton.disabled = isBusy;
   elements.appleButton.disabled = isBusy;
   elements.copyFeedButton.disabled = isBusy;
+}
+
+function setEventListBusy(isBusy) {
+  elements.eventList.setAttribute("aria-busy", String(isBusy));
 }
 
 function updateFeedLinks(payload = null) {
@@ -141,13 +147,13 @@ function renderEvents() {
   elements.eventCount.textContent = String(state.events.length);
 
   if (!state.events.length) {
-    elements.eventList.innerHTML = `<div class="empty-state">Keine Spiele für diese Filter.</div>`;
+    elements.eventList.innerHTML = `<div class="empty-state" role="status">Keine Spiele für diese Filter.</div>`;
     return;
   }
 
   const visibleEvents = state.events.slice(0, 200);
   const limitNote = state.events.length > visibleEvents.length
-    ? `<div class="list-note">Es werden 200 von ${state.events.length} Spielen angezeigt. Die ICS-Datei enthält alle gefilterten Spiele.</div>`
+    ? `<div class="list-note" role="status">Es werden 200 von ${state.events.length} Spielen angezeigt. Die ICS-Datei enthält alle gefilterten Spiele.</div>`
     : "";
 
   elements.eventList.innerHTML = visibleEvents.map((event) => {
@@ -155,7 +161,7 @@ function renderEvents() {
     const awayFav = state.favorites.includes(event.awayTeam);
     const leagueLabel = String(event.league || "sample").toUpperCase();
     return `
-      <article class="event-card" tabindex="0">
+      <article class="event-card" tabindex="0" aria-label="${escapeAttribute(event.title)}">
         <div class="date-block">
           <strong>${escapeHtml(event.dateLabel)}</strong>
           <span>${escapeHtml(event.timeLabel)}</span>
@@ -181,7 +187,7 @@ function renderEvents() {
 function renderFavorites() {
   elements.favoriteCount.textContent = String(state.favorites.length);
   if (!state.favorites.length) {
-    elements.favorites.innerHTML = `<span class="empty-small">Noch keine Favoriten</span>`;
+    elements.favorites.innerHTML = `<span class="empty-small" role="status">Noch keine Favoriten</span>`;
     return;
   }
   elements.favorites.innerHTML = state.favorites.map((team) => `
@@ -194,7 +200,7 @@ function renderFavorites() {
 
 function renderMonitoring(sources) {
   if (!sources.length) {
-    elements.monitoringList.innerHTML = `<div class="empty-small">Noch keine Importläufe.</div>`;
+    elements.monitoringList.innerHTML = `<div class="empty-small" role="status">Noch keine Importläufe.</div>`;
     return;
   }
 
