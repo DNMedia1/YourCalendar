@@ -1,0 +1,178 @@
+from __future__ import annotations
+
+import tempfile
+import unittest
+from pathlib import Path
+from urllib.parse import parse_qs
+
+import web_app
+from sports_source_registry import list_source_candidates, source_candidate_sports
+from web_app import (
+    CURRENT_FEED_ID,
+    PUBLISHED_CALENDARS,
+    build_source,
+    build_import_status,
+    feed_filename,
+    feed_path_for_params,
+    normalize_feed_params,
+    render_feed,
+    resolve_feed,
+)
+
+
+class FeedParamTests(unittest.TestCase):
+    def test_normalize_feed_params_adds_safe_defaults(self) -> None:
+        params = normalize_feed_params({})
+
+        self.assertEqual(params["sample"], ["false"])
+        self.assertEqual(params["leagues"], ["bl1,bl2,bl3"])
+        self.assertEqual(params["includePast"], ["false"])
+
+    def test_feed_path_preserves_supported_query_keys(self) -> None:
+        params = parse_qs("sample=true&leagues=bl1,bl2&team=Karlsruhe&ignored=value")
+
+        self.assertEqual(
+            feed_path_for_params(params),
+            "/feeds/current.ics?sample=true&leagues=bl1%2Cbl2&team=Karlsruhe&includePast=false",
+        )
+
+    def test_feed_filename_strips_unsafe_characters(self) -> None:
+        self.assertEqual(feed_filename("../sample feed"), "yourcalendar-samplefeed.ics")
+
+
+class FeedRenderingTests(unittest.TestCase):
+    def test_current_sample_feed_renders_marked_ics(self) -> None:
+        content, is_sample = render_feed(
+            CURRENT_FEED_ID,
+            "sample=true&leagues=bl1,bl2,bl3&includePast=true",
+        )
+
+        self.assertTrue(is_sample)
+        self.assertIn("BEGIN:VCALENDAR", content)
+        self.assertIn("[SAMPLE]", content)
+
+    def test_published_sample_feed_resolves_without_query(self) -> None:
+        name, params, is_sample = resolve_feed("sample-ksc", "")
+
+        self.assertEqual(name, PUBLISHED_CALENDARS["sample-ksc"].name)
+        self.assertEqual(params["sample"], ["true"])
+        self.assertTrue(is_sample)
+
+    def test_unknown_published_feed_raises_key_error(self) -> None:
+        with self.assertRaises(KeyError):
+            resolve_feed("missing-feed", "")
+
+
+class SourceApiTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmpdir = tempfile.TemporaryDirectory()
+        self.previous_sources_path = web_app.SOURCES_PATH
+        web_app.SOURCES_PATH = Path(self.tmpdir.name) / "sources.json"
+        web_app.SOURCES_PATH.write_text("[]\n")
+
+    def tearDown(self) -> None:
+        web_app.SOURCES_PATH = self.previous_sources_path
+        self.tmpdir.cleanup()
+
+    def test_post_sources_creates_source(self) -> None:
+        source, error = build_source(
+            {
+                "name": "OpenLigaDB",
+                "url": "https://api.openligadb.de",
+                "category": "football",
+                "license": "public",
+                "status": "active",
+            },
+        )
+
+        self.assertIsNone(error)
+        self.assertTrue(source["id"])
+        self.assertEqual(source["name"], "OpenLigaDB")
+        self.assertEqual(source["url"], "https://api.openligadb.de")
+        self.assertEqual(source["status"], "active")
+        self.assertIsNone(source["lastImport"])
+        self.assertIn("createdAt", source)
+
+        web_app.save_sources([source])
+        self.assertEqual(web_app.load_sources(), [source])
+
+    def test_post_sources_requires_name_and_url(self) -> None:
+        source, error = build_source({"name": "Only name"})
+
+        self.assertIsNone(source)
+        self.assertEqual(error, "Missing required field: url")
+
+
+class SourceCandidateRegistryTests(unittest.TestCase):
+    def test_registry_contains_multisport_and_combat_candidates(self) -> None:
+        candidate_ids = {candidate["id"] for candidate in list_source_candidates()}
+
+        self.assertIn("public-espn-api", candidate_ids)
+        self.assertIn("thesportsdb", candidate_ids)
+        self.assertIn("ufc-stats-api", candidate_ids)
+        self.assertIn("octagon-api", candidate_ids)
+
+    def test_registry_filters_by_sport(self) -> None:
+        mma_candidates = list_source_candidates(sport="mma")
+        candidate_ids = {candidate["id"] for candidate in mma_candidates}
+
+        self.assertIn("ufc-stats-api", candidate_ids)
+        self.assertIn("octagon-api", candidate_ids)
+        self.assertNotIn("openfootball-football-json", candidate_ids)
+
+    def test_registry_can_hide_high_risk_candidates(self) -> None:
+        safer_candidates = list_source_candidates(include_risky=False)
+        high_risk_ids = {
+            candidate["id"]
+            for candidate in list_source_candidates()
+            if candidate["riskLevel"] == "high"
+        }
+
+        self.assertTrue(high_risk_ids)
+        self.assertTrue(high_risk_ids.isdisjoint({candidate["id"] for candidate in safer_candidates}))
+
+    def test_registry_exposes_filter_sports(self) -> None:
+        sports = source_candidate_sports()
+
+        self.assertIn("football", sports)
+        self.assertIn("mma", sports)
+        self.assertIn("formula-1", sports)
+
+
+class ImportMonitoringTests(unittest.TestCase):
+    def test_build_import_status_uses_latest_run_per_published_feed(self) -> None:
+        statuses = build_import_status(
+            [
+                {
+                    "feedId": "football-germany",
+                    "status": "error",
+                    "eventCount": None,
+                    "finishedAt": "2026-05-22T07:00:00+00:00",
+                    "warnings": [],
+                    "error": "source unavailable",
+                    "sample": False,
+                },
+                {
+                    "feedId": "football-germany",
+                    "status": "success",
+                    "eventCount": 14,
+                    "finishedAt": "2026-05-22T08:00:00+00:00",
+                    "warnings": [],
+                    "error": None,
+                    "sample": False,
+                },
+            ]
+        )
+
+        football = next(status for status in statuses if status["feedId"] == "football-germany")
+        self.assertEqual(football["status"], "success")
+        self.assertEqual(football["eventCount"], 14)
+        self.assertIsNone(football["error"])
+
+        sample = next(status for status in statuses if status["feedId"] == "sample-ksc")
+        self.assertEqual(sample["status"], "never_run")
+        self.assertIsNone(sample["eventCount"])
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 import unittest
-from datetime import datetime
+import tempfile
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from urllib.parse import parse_qs, urlparse
 from zoneinfo import ZoneInfo
 
+import web_app
 from web_app import (
     CURRENT_FEED_ID,
     calendar_catalog,
     feed_filename,
     feed_path_for_params,
+    load_cached_feed,
     normalize_feed_params,
     render_feed,
     resolve_feed,
@@ -53,6 +54,14 @@ class WebFeedTest(unittest.TestCase):
         self.assertIn("X-WR-CALNAME:YourCalendar Sample Football", ics)
         self.assertIn("[SAMPLE]", ics)
         self.assertIn("CATEGORIES:sample", ics)
+
+    def test_published_holiday_feed_resolves_to_holiday_source(self) -> None:
+        calendar_name, params, is_sample = resolve_feed("holidays-germany", "")
+
+        self.assertEqual(calendar_name, "YourCalendar German Holidays")
+        self.assertEqual(params["source"], ["holidays"])
+        self.assertEqual(params["country"], ["DE"])
+        self.assertFalse(is_sample)
 
     def test_current_sample_feed_uses_query_params(self) -> None:
         calendar_name, params, is_sample = resolve_feed(
@@ -209,6 +218,28 @@ class WebFeedTest(unittest.TestCase):
         self.assertIn("Kalender bleibt verfügbar", health["detail"])
         self.assertEqual(health["technicalDetail"], "HTTP 500 while fetching test-url")
         self.assertEqual(health["monitorObservation"]["status"], "error")
+
+
+class CachedFeedTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmpdir = tempfile.TemporaryDirectory()
+        self.previous_cache_dir = web_app.FEED_CACHE_DIR
+        web_app.FEED_CACHE_DIR = Path(self.tmpdir.name)
+
+    def tearDown(self) -> None:
+        web_app.FEED_CACHE_DIR = self.previous_cache_dir
+        self.tmpdir.cleanup()
+
+    def test_published_feed_uses_cache_without_query(self) -> None:
+        cache_path = web_app.cached_feed_path("sample-ksc")
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path.write_text("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n", encoding="utf-8")
+
+        self.assertEqual(load_cached_feed("sample-ksc"), "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n")
+
+    def test_current_feed_and_filtered_feeds_do_not_use_cache(self) -> None:
+        self.assertIsNone(load_cached_feed(CURRENT_FEED_ID))
+        self.assertIsNone(load_cached_feed("sample-ksc", "sample=true"))
 
 
 if __name__ == "__main__":

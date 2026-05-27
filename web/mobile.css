@@ -1,0 +1,182 @@
+/* Mobile-first overrides for YourCalendar */
+
+/* Increase tap targets */
+button, .segment, .icon-button, .button, input[type="checkbox"] {
+  min-height: 48px;
+  font-size: 1rem;
+}
+
+@media (max-width: 900px) {
+  body {
+    background: var(--bg);
+  }
+
+  .content {
+    padding: 20px;
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .actions .button,
+  .actions .theme-toggle {
+    width: 100%;
+  }
+
+  .actions .icon-button {
+    width: 100%;
+  }
+
+  .event-actions {
+    justify-content: space-between;
+    width: 100%;
+  }
+}
+
+/* Adjust sidebar spacing on very small screens */
+
+@media (max-width: 600px) {
+  .app-shell {
+    border-left: 0;
+    border-right: 0;
+  }
+  .sidebar {
+    padding: 12px;
+    gap: 12px;
+  }
+  .brand h1 {
+    font-size: 1.5rem;
+  }
+  .brand p {
+    font-size: 0.9rem;
+  }
+  .content {
+    padding: 16px 12px 24px;
+  }
+  .topbar {
+    gap: 16px;
+  }
+  h2 {
+    font-size: 2rem;
+  }
+  .actions {
+    grid-template-columns: 1fr;
+  }
+  .event-card {
+    min-height: 0;
+    padding: 16px;
+  }
+  .date-block {
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+  }
+  .event-main strong {
+    font-size: 1rem;
+  }
+  .event-meta {
+    font-size: .9rem;
+  }
+  .tag {
+    min-width: 52px;
+    text-align: center;
+  }
+
+  /* Subscription area tweaks for mobile */
+
+/* Dark‑Mode overrides for subscription area */
+[data-theme="dark"] .subscription-area {
+  background: var(--surface);
+  color: var(--muted);
+}
+[data-theme="dark"] .subscription-row .input {
+  background: var(--panel);
+  color: var(--ink);
+  border-color: var(--line);
+}
+[data-theme="dark"] .subscribe-notes span {
+  background: var(--panel);
+  color: var(--ink);
+  border-color: var(--line);
+}
+  .subscription-area {
+    padding: 12px;
+  }
+  .subscription-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .subscription-row .input {
+    width: 100%;
+  }
+  .subscription-row .button {
+    width: 100%;
+  }
+  .subscribe-notes {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.9rem;
+  }
+}
+@media (max-width: 600px) {
+  .app-shell {
+    border-left: 0;
+    border-right: 0;
+  }
+
+  .sidebar {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .brand h1 {
+    font-size: 1.5rem;
+  }
+
+  .brand p {
+    font-size: 0.9rem;
+  }
+
+  .content {
+    padding: 16px 12px 24px;
+  }
+
+  .topbar {
+    gap: 16px;
+  }
+
+  h2 {
+    font-size: 2rem;
+  }
+
+  .actions {
+    grid-template-columns: 1fr;
+  }
+
+  .event-card {
+    min-height: 0;
+    padding: 16px;
+  }
+
+  .date-block {
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+  }
+
+  .event-main strong {
+    font-size: 1rem;
+  }
+
+  .event-meta {
+    font-size: .9rem;
+  }
+
+  .tag {
+    min-width: 52px;
+    text-align: center;
+  }
+}

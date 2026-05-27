@@ -4,8 +4,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>YourCalendar</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b6b45'/%3E%3Ctext x='32' y='39' text-anchor='middle' font-size='22' font-family='Arial' font-weight='700' fill='white'%3EYC%3C/text%3E%3C/svg%3E" />
+    <link rel="preload" href="/tailwind.css" as="style" />
+    <link rel="stylesheet" href="/tailwind.css" />
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/mobile.css" />
   </head>
   <body>
     <main class="app-shell">
@@ -18,40 +20,49 @@
           </div>
         </div>
 
-        <section class="panel">
-          <span class="eyebrow">Datenmodus</span>
-          <div class="segmented">
-            <button class="segment" id="liveMode" type="button">Live</button>
-            <button class="segment active" id="sampleMode" type="button">Sample</button>
+        <section class="panel" aria-labelledby="dataModeLabel">
+          <span class="eyebrow" id="dataModeLabel">Datenmodus</span>
+          <div class="segmented" role="group" aria-label="Datenmodus">
+            <button class="segment" id="liveMode" type="button" aria-pressed="false">Live</button>
+            <button class="segment active" id="sampleMode" type="button" aria-pressed="true">Sample</button>
           </div>
         </section>
 
-        <section class="panel">
-          <span class="eyebrow">Ligen</span>
-          <label><input type="checkbox" class="league" value="bl1" checked /> 1. Bundesliga</label>
-          <label><input type="checkbox" class="league" value="bl2" checked /> 2. Bundesliga</label>
-          <label><input type="checkbox" class="league" value="bl3" checked /> 3. Liga</label>
-          <label><input type="checkbox" class="league" value="dfb" /> DFB-Pokal</label>
+        <section class="panel" aria-labelledby="leagueLabel">
+          <span class="eyebrow" id="leagueLabel">Ligen</span>
+          <label><input type="checkbox" class="league" value="bl1" checked /> <span>1. Bundesliga</span></label>
+          <label><input type="checkbox" class="league" value="bl2" checked /> <span>2. Bundesliga</span></label>
+          <label><input type="checkbox" class="league" value="bl3" checked /> <span>3. Liga</span></label>
+          <label><input type="checkbox" class="league" value="dfb" /> <span>DFB-Pokal</span></label>
         </section>
 
-        <section class="panel">
-          <span class="eyebrow">Vereinsfilter</span>
-          <input class="input" id="teamSearch" type="search" placeholder="z.B. Karlsruhe, Bayern, Schalke" />
-          <label class="soft-check"><input type="checkbox" id="includePast" checked /> Gespielte Spiele anzeigen</label>
+        <section class="panel" aria-labelledby="teamFilterLabel">
+          <span class="eyebrow" id="teamFilterLabel">Vereinsfilter</span>
+          <label class="sr-only" for="teamSearch">Verein suchen</label>
+          <input class="input" id="teamSearch" type="search" placeholder="z.B. Karlsruhe, Bayern, Schalke" autocomplete="off" />
+          <label class="soft-check"><input type="checkbox" id="includePast" checked /> <span>Gespielte Spiele anzeigen</span></label>
         </section>
 
-        <section class="panel favorites-panel">
+        <section class="panel favorites-panel" aria-labelledby="favoritesLabel">
           <div class="panel-head">
-            <span class="eyebrow">Favoriten</span>
+            <span class="eyebrow" id="favoritesLabel">Favoriten</span>
             <button class="mini-button" id="clearFavorites" type="button">Leeren</button>
           </div>
-          <div class="favorites" id="favorites"></div>
+          <div class="favorites" id="favorites" aria-live="polite"></div>
         </section>
 
-        <section class="panel muted">
+        <section class="panel muted" aria-live="polite">
           <span class="eyebrow">Quelle</span>
           <strong id="sourceStatus">Bereit</strong>
           <p id="sourceNote">Sample-Modus nutzt Testdaten.</p>
+        </section>
+
+        <section class="panel monitoring-panel" aria-labelledby="monitoringLabel">
+          <div class="panel-head">
+            <span class="eyebrow" id="monitoringLabel">Import-Monitoring</span>
+            <button class="mini-button" id="refreshMonitoring" type="button">Prüfen</button>
+          </div>
+          <div class="monitoring-list" id="monitoringList" aria-live="polite"></div>
         </section>
       </aside>
 
@@ -62,7 +73,13 @@
             <h2>Kalender finden</h2>
           </div>
           <div class="actions">
-            <button class="icon-button" id="refreshButton" type="button" title="Aktualisieren">↻</button>
+            <button class="theme-toggle" id="themeToggle" type="button" aria-pressed="false" aria-label="Dark Mode aktivieren">
+              <span class="theme-toggle-track" aria-hidden="true">
+                <span class="theme-toggle-thumb"></span>
+              </span>
+              <span class="theme-toggle-label">Dark</span>
+            </button>
+            <button class="icon-button" id="refreshButton" type="button" title="Aktualisieren" aria-label="Termine aktualisieren">↻</button>
             <a class="button secondary" id="downloadLink" href="/feeds/current.ics?sample=true&leagues=bl1%2Cbl2%2Cbl3&includePast=true">ICS laden</a>
             <button class="button primary" id="appleButton" type="button">Apple Kalender öffnen</button>
           </div>
@@ -137,9 +154,28 @@
         <section class="calendar-area">
           <div class="section-title">
             <h3>Nächste Spiele</h3>
-            <span id="modeBadge">Sample</span>
+            <span id="modeBadge" aria-label="Aktiver Datenmodus">Sample</span>
           </div>
-          <div class="event-list" id="eventList"></div>
+          <div class="event-list" id="eventList" aria-live="polite" aria-busy="false"></div>
+        </section>
+
+        <section class="source-candidates-area" aria-labelledby="sourceCandidatesTitle">
+          <div class="section-title">
+            <div>
+              <span class="eyebrow">Source Discovery</span>
+              <h3 id="sourceCandidatesTitle">API-Kandidaten</h3>
+            </div>
+            <span id="sourceCandidateCount">0</span>
+          </div>
+          <div class="source-tools">
+            <label class="sr-only" for="sourceCandidateFilter">API-Kandidaten filtern</label>
+            <input class="input" id="sourceCandidateFilter" type="search" placeholder="Sport, API oder Lizenz suchen" autocomplete="off" />
+            <label class="soft-check source-risk-toggle">
+              <input type="checkbox" id="includeRiskySources" checked />
+              <span>Risikoquellen anzeigen</span>
+            </label>
+          </div>
+          <div class="source-candidate-list" id="sourceCandidateList" aria-live="polite"></div>
         </section>
       </section>
     </main>

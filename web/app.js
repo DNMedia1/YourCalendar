@@ -15,7 +15,9 @@ const state = {
   selectedCoverageId: "football",
   selectedCategoryId: "sports",
   events: [],
+  sourceCandidates: [],
   favorites: JSON.parse(localStorage.getItem("yourcalendar:favorites") || "[]"),
+  theme: localStorage.getItem("yourcalendar:theme") || "system",
 };
 
 const $ = (id) => document.getElementById(id);
@@ -24,6 +26,7 @@ const elements = {
   liveMode: $("liveMode"),
   sampleMode: $("sampleMode"),
   refreshButton: $("refreshButton"),
+  themeToggle: $("themeToggle"),
   appleButton: $("appleButton"),
   copyFeedButton: $("copyFeedButton"),
   downloadLink: $("downloadLink"),
@@ -47,7 +50,15 @@ const elements = {
   sourceStatus: $("sourceStatus"),
   sourceNote: $("sourceNote"),
   modeBadge: $("modeBadge"),
+  refreshMonitoring: $("refreshMonitoring"),
+  monitoringList: $("monitoringList"),
+  sourceCandidateFilter: $("sourceCandidateFilter"),
+  includeRiskySources: $("includeRiskySources"),
+  sourceCandidateCount: $("sourceCandidateCount"),
+  sourceCandidateList: $("sourceCandidateList"),
 };
+
+const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
 
 function selectedLeagues() {
   return [...document.querySelectorAll(".league:checked")].map((input) => input.value);
@@ -62,7 +73,33 @@ function setMode(sample) {
   state.sample = sample;
   elements.sampleMode.classList.toggle("active", sample);
   elements.liveMode.classList.toggle("active", !sample);
+  elements.sampleMode.setAttribute("aria-pressed", String(sample));
+  elements.liveMode.setAttribute("aria-pressed", String(!sample));
   loadEvents();
+}
+
+function effectiveTheme() {
+  if (state.theme === "system") return systemDark.matches ? "dark" : "light";
+  return state.theme;
+}
+
+function applyTheme(withTransition = false) {
+  const theme = effectiveTheme();
+  if (withTransition) {
+    document.documentElement.classList.add("theme-transition");
+    window.setTimeout(() => document.documentElement.classList.remove("theme-transition"), 260);
+  }
+  document.documentElement.dataset.theme = theme;
+  const isDark = theme === "dark";
+  elements.themeToggle.setAttribute("aria-pressed", String(isDark));
+  elements.themeToggle.setAttribute("aria-label", isDark ? "Light Mode aktivieren" : "Dark Mode aktivieren");
+  elements.themeToggle.querySelector(".theme-toggle-label").textContent = isDark ? "Light" : "Dark";
+}
+
+function toggleTheme() {
+  state.theme = effectiveTheme() === "dark" ? "light" : "dark";
+  localStorage.setItem("yourcalendar:theme", state.theme);
+  applyTheme(true);
 }
 
 function params() {
@@ -77,6 +114,7 @@ function params() {
 
 async function loadEvents() {
   setBusy(true);
+  setEventListBusy(true);
   try {
     const response = await fetch(`/api/events?${params().toString()}`);
     const payload = await response.json();
@@ -106,7 +144,44 @@ async function loadEvents() {
     renderEvents();
     toast(error.message, true);
   } finally {
+    setEventListBusy(false);
     setBusy(false);
+  }
+}
+
+async function loadMonitoring() {
+  if (!elements.monitoringList) return;
+  elements.refreshMonitoring.disabled = true;
+  try {
+    const response = await fetch("/api/import-status");
+    const payload = await response.json();
+    if (!payload.ok) throw new Error(payload.error || "Monitoring konnte nicht geladen werden.");
+    renderMonitoring(payload.sources || []);
+  } catch (error) {
+    elements.monitoringList.innerHTML = `<div class="empty-small" role="status">Monitoring nicht verfügbar.</div>`;
+    toast(error.message, true);
+  } finally {
+    elements.refreshMonitoring.disabled = false;
+  }
+}
+
+async function loadSourceCandidates() {
+  if (!elements.sourceCandidateList) return;
+  elements.sourceCandidateList.innerHTML = `<div class="empty-small">API-Kandidaten werden geladen.</div>`;
+  try {
+    const query = new URLSearchParams({
+      includeRisky: String(elements.includeRiskySources.checked),
+    });
+    const response = await fetch(`/api/source-candidates?${query.toString()}`);
+    const payload = await response.json();
+    if (!payload.ok) throw new Error(payload.error || "API-Kandidaten konnten nicht geladen werden.");
+    state.sourceCandidates = payload.candidates || [];
+    renderSourceCandidates();
+  } catch (error) {
+    state.sourceCandidates = [];
+    elements.sourceCandidateCount.textContent = "0";
+    elements.sourceCandidateList.innerHTML = `<div class="empty-state">API-Kandidaten nicht verfügbar.</div>`;
+    toast(error.message, true);
   }
 }
 
@@ -114,6 +189,10 @@ function setBusy(isBusy) {
   elements.refreshButton.disabled = isBusy;
   elements.appleButton.disabled = isBusy;
   elements.copyFeedButton.disabled = isBusy;
+}
+
+function setEventListBusy(isBusy) {
+  elements.eventList.setAttribute("aria-busy", String(isBusy));
 }
 
 function updateFeedLinks(payload = null) {
@@ -124,341 +203,102 @@ function updateFeedLinks(payload = null) {
   elements.feedUrl.value = subscribeUrl;
 }
 
-function applySourceHealth(sourceHealth = null, fallbackLabel = "Bereit") {
-  const health = sourceHealth || {
-    status: "unknown",
-    label: fallbackLabel,
-    title: fallbackLabel,
-    detail: "Noch kein Quellenstatus verfügbar.",
-    hints: [],
-  };
-    state.sourceHealth = health;
-  updateMonitorObservation(health.monitorObservation);
-  elements.sourceStatus.textContent = health.label || fallbackLabel;
-  elements.sourceStatus.dataset.status = health.status || "unknown";
-  elements.sourceNote.textContent = health.detail || "";
-  elements.modeBadge.textContent = health.label || fallbackLabel;
-  elements.modeBadge.dataset.status = health.status || "unknown";
-}
-
-async function loadCalendars() {
-  try {
-    const response = await fetch("/api/calendars");
-    const payload = await response.json();
-    if (!payload.ok) throw new Error(payload.error || "Kalender konnten nicht geladen werden.");
-    state.categories = payload.categories || [];
-    state.qualityLegend = payload.qualityLegend || [];
-    state.sportsCoverage = payload.sportsCoverage || { europeSports: [], globalCombatSports: [], championships: [] };
-    state.sourcePlan = payload.sourcePlan || { total: 0, active: 0, needsWork: 0, items: [] };
-    state.sourceMonitor = payload.sourceMonitor || { total: 0, watching: 0, planned: 0, items: [] };
-    const selectedExists = state.categories.some((category) => category.id === state.selectedCategoryId);
-    state.selectedCategoryId = selectedExists ? state.selectedCategoryId : state.categories[0]?.id || "";
-    if (!findCoverageOption(state.selectedCoverageId)) {
-      state.selectedCoverageId = allCoverageOptions()[0]?.id || "";
-    }
-    renderCatalog();
-  } catch (error) {
-    state.categories = [];
-    elements.catalogStatus.textContent = "Fehler";
-    elements.qualityLegend.innerHTML = "";
-    elements.sportsCoverage.innerHTML = "";
-    elements.coverageDetail.innerHTML = "";
-    elements.sourcePlanStatus.textContent = "Fehler";
-    elements.sourcePlan.innerHTML = "";
-    elements.sourceMonitorStatus.textContent = "Fehler";
-    elements.sourceMonitor.innerHTML = "";
-    elements.categoryTabs.innerHTML = "";
-    elements.calendarCatalog.innerHTML = `<div class="empty-state">Kalenderliste konnte nicht geladen werden.</div>`;
-    toast(error.message, true);
-  }
-}
-
-function renderCatalog() {
-  const total = state.categories.reduce((sum, category) => sum + category.calendarCount, 0);
-  elements.catalogStatus.textContent = `${total} Kalender`;
-  renderQualityLegend();
-  renderSportsCoverage();
-  renderSourcePlan();
-  renderSourceMonitor();
-  renderCategoryTabs();
-  renderCalendarCatalog();
-}
-
-function renderQualityLegend() {
-  elements.qualityLegend.innerHTML = state.qualityLegend.map((item) => `
-    <div class="legend-item">
-      <strong>${escapeHtml(item.label)}</strong>
-      <span>${escapeHtml(item.description)}</span>
-    </div>
-  `).join("");
-}
-
-function renderCategoryTabs() {
-  elements.categoryTabs.innerHTML = state.categories.map((category) => {
-    const selected = category.id === state.selectedCategoryId;
-    return `
-      <button class="category-tab${selected ? " active" : ""}" type="button" role="tab" aria-selected="${selected}" data-category="${escapeAttribute(category.id)}">
-        <span>${escapeHtml(category.name)}</span>
-        <strong>${category.calendarCount}</strong>
-      </button>
-    `;
-  }).join("");
-  document.querySelectorAll(".category-tab").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.selectedCategoryId = button.dataset.category;
-      renderCatalog();
-    });
-  });
-}
-
-function coverageGroups() {
-  return [
-    { title: "Europa Sportarten", items: state.sportsCoverage.europeSports || [] },
-    { title: "Kampfsport weltweit", items: state.sportsCoverage.globalCombatSports || [] },
-    { title: "WM & EM", items: state.sportsCoverage.championships || [] },
-  ];
-}
-
-function allCoverageOptions() {
-  return coverageGroups().flatMap((group) => group.items);
-}
-
-function findCoverageOption(id) {
-  return allCoverageOptions().find((option) => option.id === id);
-}
-
-function renderSportsCoverage() {
-  const groups = coverageGroups();
-  elements.sportsCoverage.innerHTML = groups.map((group) => `
-    <div class="coverage-group">
-      <strong>${escapeHtml(group.title)}</strong>
-      <div class="coverage-options">
-        ${group.items.map((item) => `
-          <button class="coverage-chip${item.id === state.selectedCoverageId ? " active" : ""}" type="button" data-coverage="${escapeAttribute(item.id)}">
-            ${escapeHtml(item.name)}
-          </button>
-        `).join("")}
-      </div>
-    </div>
-  `).join("");
-
-  document.querySelectorAll(".coverage-chip").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.selectedCoverageId = button.dataset.coverage;
-      renderSportsCoverage();
-    });
+function renderSourceCandidates() {
+  const filter = elements.sourceCandidateFilter.value.trim().toLowerCase();
+  const candidates = state.sourceCandidates.filter((candidate) => {
+    if (!filter) return true;
+    return [
+      candidate.name,
+      candidate.coverage,
+      candidate.endpointType,
+      candidate.license,
+      candidate.usageDecision,
+      ...(candidate.sports || []),
+    ].join(" ").toLowerCase().includes(filter);
   });
 
-  const selected = findCoverageOption(state.selectedCoverageId);
-  if (!selected) {
-    elements.coverageDetail.innerHTML = "";
-    return;
-  }
-  elements.coverageDetail.innerHTML = `
-    <div>
-      <span>${escapeHtml(selected.scope)} · ${escapeHtml(selected.group)}</span>
-      <strong>${escapeHtml(selected.name)}</strong>
-    </div>
-    <p>${escapeHtml(selected.description)}</p>
-    <em>${escapeHtml(selected.statusLabel)} · ${escapeHtml(selected.sourceNote)}</em>
-  `;
-}
-
-function renderSourcePlan() {
-  const items = state.sourcePlan.items || [];
-  elements.sourcePlanStatus.textContent = `${state.sourcePlan.needsWork || 0} offen · ${state.sourcePlan.active || 0} aktiv`;
-  if (!items.length) {
-    elements.sourcePlan.innerHTML = `<div class="empty-state">Noch keine Provider-Planung verfügbar.</div>`;
+  elements.sourceCandidateCount.textContent = String(candidates.length);
+  if (!candidates.length) {
+    elements.sourceCandidateList.innerHTML = `<div class="empty-state">Keine passenden API-Kandidaten.</div>`;
     return;
   }
 
-  elements.sourcePlan.innerHTML = items.map((item) => `
-    <article class="source-plan-card">
-      <div class="source-plan-card-head">
-        <div>
-          <span>${escapeHtml(item.scope)} · ${escapeHtml(item.priority)}</span>
-          <strong>${escapeHtml(item.title)}</strong>
-        </div>
-        <em class="${escapeAttribute(item.status)}">${escapeHtml(item.statusLabel)}</em>
-      </div>
-      <p>${escapeHtml(item.summary)}</p>
-      <div class="source-plan-columns">
-        <div>
-          <span>Blocker</span>
-          <ul>${item.blockers.map((blocker) => `<li>${escapeHtml(blocker)}</li>`).join("")}</ul>
-        </div>
-        <div>
-          <span>Nächste Schritte</span>
-          <ul>${item.nextSteps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ul>
-        </div>
-      </div>
-    </article>
-  `).join("");
-}
+  elements.sourceCandidateList.innerHTML = candidates.map((candidate) => {
+    const sourceUrl = candidate.repoUrl || candidate.docsUrl || candidate.baseUrl || "";
+    const links = [
+      candidate.repoUrl ? `<a href="${escapeAttribute(candidate.repoUrl)}" target="_blank" rel="noopener noreferrer">Repo</a>` : "",
+      candidate.docsUrl ? `<a href="${escapeAttribute(candidate.docsUrl)}" target="_blank" rel="noopener noreferrer">Docs</a>` : "",
+      candidate.baseUrl ? `<a href="${escapeAttribute(candidate.baseUrl)}" target="_blank" rel="noopener noreferrer">API</a>` : "",
+    ].filter(Boolean).join("");
+    const sports = (candidate.sports || []).slice(0, 6).map((sport) => `
+      <span class="source-sport">${escapeHtml(sport)}</span>
+    `).join("");
+    const extraSports = (candidate.sports || []).length > 6
+      ? `<span class="source-sport">+${candidate.sports.length - 6}</span>`
+      : "";
 
-function updateMonitorObservation(observation = null) {
-  if (!observation || !state.sourceMonitor.items?.length) return;
-  state.sourceMonitor = {
-    ...state.sourceMonitor,
-    items: state.sourceMonitor.items.map((item) => {
-      if (item.id !== observation.sourceId) return item;
-      return {
-        ...item,
-        liveStatus: observation.status,
-        lastObservationLabel: observation.checkedLabel,
-        lastObservationCount: observation.eventCount,
-        lastObservationMessage: observation.message,
-      };
-    }),
-  };
-  renderSourceMonitor();
-}
-
-function renderSourceMonitor() {
-  const items = state.sourceMonitor.items || [];
-  elements.sourceMonitorStatus.textContent = `${state.sourceMonitor.watching || 0} beobachtet · ${state.sourceMonitor.planned || 0} geplant`;
-  if (!items.length) {
-    elements.sourceMonitor.innerHTML = `<div class="empty-state">Noch keine Quellen im Monitoring.</div>`;
-    return;
-  }
-
-  elements.sourceMonitor.innerHTML = items.map((item) => {
-    const lastRun = item.lastRun || null;
-    const liveStatus = item.liveStatus || lastRun?.status || item.status;
-    const eventCount = Number.isInteger(item.lastObservationCount)
-      ? `${item.lastObservationCount} Events`
-      : Number.isInteger(lastRun?.eventCount)
-        ? `${lastRun.eventCount} Events`
-      : escapeHtml(item.eventCountLabel);
-    const checkedLabel = item.lastObservationLabel || lastRun?.checkedLabel || item.lastCheckedMode;
-    const message = item.lastObservationMessage || lastRun?.message || item.message;
     return `
-      <article class="source-monitor-card">
-        <div class="source-monitor-card-head">
+      <article class="source-candidate-card" data-risk="${escapeAttribute(candidate.riskLevel)}">
+        <div class="source-candidate-main">
           <div>
-            <span>${escapeHtml(item.scope)}</span>
-            <strong>${escapeHtml(item.sourceLabel)}</strong>
+            <strong>${escapeHtml(candidate.name)}</strong>
+            <p>${escapeHtml(candidate.coverage)}</p>
           </div>
-          <em class="${escapeAttribute(liveStatus)}">${escapeHtml(item.statusLabel)}</em>
+          <span class="risk-pill" data-risk="${escapeAttribute(candidate.riskLevel)}">${escapeHtml(riskLabel(candidate.riskLevel))}</span>
         </div>
-        <dl>
-          <div>
-            <dt>Letzte Prüfung</dt>
-            <dd>${escapeHtml(checkedLabel)}</dd>
-          </div>
-          <div>
-            <dt>Event-Anzahl</dt>
-            <dd>${eventCount}</dd>
-          </div>
-        </dl>
-        <p>${escapeHtml(message)}</p>
-        <small>${escapeHtml(item.nextAction)}</small>
+        <div class="source-sports">${sports}${extraSports}</div>
+        <div class="source-candidate-meta">
+          <span>${escapeHtml(candidate.endpointType)}</span>
+          <span>${candidate.supportsLiveEvents ? "Live-fähig" : "Dataset/Recherche"}</span>
+          <span>${candidate.requiresApiKey ? "API-Key" : "Kein Key"}</span>
+        </div>
+        <p class="source-license">${escapeHtml(candidate.license)}</p>
+        <div class="source-links" aria-label="${escapeAttribute(candidate.name)} Links">${links || `<span>${escapeHtml(sourceUrl)}</span>`}</div>
       </article>
     `;
   }).join("");
 }
 
-function renderCalendarCatalog() {
-  const category = state.categories.find((item) => item.id === state.selectedCategoryId);
-  if (!category) {
-    elements.calendarCatalog.innerHTML = `<div class="empty-state">Noch keine Kategorien verfügbar.</div>`;
-    return;
-  }
-
-  if (!category.calendars.length) {
-    elements.calendarCatalog.innerHTML = `
-      <article class="catalog-empty">
-        <strong>${escapeHtml(category.name)} ist vorbereitet</strong>
-        <p>${escapeHtml(category.description)}</p>
-        <span>Kalender folgen, sobald eine verlässliche Quelle angebunden ist.</span>
-      </article>
-    `;
-    return;
-  }
-
-  elements.calendarCatalog.innerHTML = category.calendars.map((calendar) => `
-    <article class="calendar-card">
-      <div class="calendar-card-main">
-        <div>
-          <span class="calendar-category">${escapeHtml(category.name)}</span>
-          <h4>${escapeHtml(calendar.name)}</h4>
-        </div>
-        <span class="status-pill ${escapeAttribute(calendar.quality.level)}">${escapeHtml(calendar.quality.label)}</span>
-      </div>
-      <p>${escapeHtml(calendar.description)}</p>
-      <div class="source-row">
-        <span>Quelle</span>
-        <strong>${escapeHtml(calendar.sourceLabel)}</strong>
-      </div>
-      <div class="quality-grid">
-        <div>
-          <span>Aktualisierung</span>
-          <strong>${escapeHtml(calendar.quality.updatePolicy)}</strong>
-          <small>${escapeHtml(calendar.quality.updatedLabel)}</small>
-        </div>
-        <div>
-          <span>Einordnung</span>
-          <strong>${escapeHtml(calendar.quality.sourceTypeLabel)}</strong>
-          <small>${escapeHtml(calendar.quality.reliabilityNote)}</small>
-        </div>
-      </div>
-      <ul class="quality-notes">
-        ${calendar.quality.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}
-      </ul>
-      <div class="calendar-actions">
-        ${calendar.hasFeed
-          ? `<a class="button primary" href="${escapeAttribute(calendar.feedUrl)}">ICS abonnieren</a>
-             <button class="button secondary calendar-copy" type="button" data-url="${escapeAttribute(calendar.subscribeUrl)}">Link kopieren</button>`
-          : `<button class="button disabled" type="button" disabled>Provider nötig</button>
-             <span class="action-note">Noch kein echter Event-Feed.</span>`
-        }
-      </div>
-    </article>
-  `).join("");
-
-  document.querySelectorAll(".calendar-copy").forEach((button) => {
-    button.addEventListener("click", () => copyText(button.dataset.url, "Kalender-Link kopiert."));
-  });
+function riskLabel(risk) {
+  const labels = {
+    low: "niedrig",
+    medium: "prüfen",
+    high: "hoch",
+  };
+  return labels[risk] || "unklar";
 }
 
 function renderEvents() {
   elements.eventCount.textContent = String(state.events.length);
 
   if (!state.events.length) {
-    const health = state.sourceHealth || {};
-    const hints = (health.hints || []).map((hint) => `<li>${escapeHtml(hint)}</li>`).join("");
-    elements.eventList.innerHTML = `
-      <div class="empty-state source-empty">
-        <strong>${escapeHtml(health.title || "Keine Spiele für diese Filter.")}</strong>
-        <p>${escapeHtml(health.detail || "Für diese Auswahl wurden keine Termine gefunden.")}</p>
-        ${hints ? `<ul>${hints}</ul>` : ""}
-      </div>
-    `;
+    elements.eventList.innerHTML = `<div class="empty-state" role="status">Keine Spiele für diese Filter.</div>`;
     return;
   }
 
   const visibleEvents = state.events.slice(0, 200);
   const limitNote = state.events.length > visibleEvents.length
-    ? `<div class="list-note">Es werden 200 von ${state.events.length} Spielen angezeigt. Die ICS-Datei enthält alle gefilterten Spiele.</div>`
+    ? `<div class="list-note" role="status">Es werden 200 von ${state.events.length} Spielen angezeigt. Die ICS-Datei enthält alle gefilterten Spiele.</div>`
     : "";
 
   elements.eventList.innerHTML = visibleEvents.map((event) => {
     const homeFav = state.favorites.includes(event.homeTeam);
     const awayFav = state.favorites.includes(event.awayTeam);
+    const leagueLabel = String(event.league || "sample").toUpperCase();
     return `
-      <article class="event-card">
+      <article class="event-card" tabindex="0" aria-label="${escapeAttribute(event.title)}">
         <div class="date-block">
-          <strong>${event.dateLabel}</strong>
-          <span>${event.timeLabel}</span>
+          <strong>${escapeHtml(event.dateLabel)}</strong>
+          <span>${escapeHtml(event.timeLabel)}</span>
         </div>
         <div class="event-main">
-          <strong>${event.title}</strong>
-          <div class="event-meta">${event.leagueName}${event.location ? ` · ${event.location}` : ""}</div>
+          <strong>${escapeHtml(event.title)}</strong>
+          <div class="event-meta">${escapeHtml(event.leagueName)}${event.location ? ` · ${escapeHtml(event.location)}` : ""}</div>
         </div>
         <div class="event-actions">
-          <button class="star-button" type="button" data-team="${escapeAttribute(event.homeTeam)}" title="${homeFav ? "Favorit entfernen" : "Heimteam favorisieren"}">${homeFav ? "★" : "☆"}</button>
-          <button class="star-button" type="button" data-team="${escapeAttribute(event.awayTeam)}" title="${awayFav ? "Favorit entfernen" : "Auswärtsteam favorisieren"}">${awayFav ? "★" : "☆"}</button>
-          <span class="tag">${event.league.toUpperCase()}</span>
+          <button class="star-button${homeFav ? " is-active" : ""}" type="button" data-team="${escapeAttribute(event.homeTeam)}" aria-pressed="${homeFav}" aria-label="${homeFav ? "Heimteam aus Favoriten entfernen" : "Heimteam favorisieren"}">${homeFav ? "★" : "☆"}</button>
+          <button class="star-button${awayFav ? " is-active" : ""}" type="button" data-team="${escapeAttribute(event.awayTeam)}" aria-pressed="${awayFav}" aria-label="${awayFav ? "Auswärtsteam aus Favoriten entfernen" : "Auswärtsteam favorisieren"}">${awayFav ? "★" : "☆"}</button>
+          <span class="tag" data-league="${escapeAttribute(event.league)}">${escapeHtml(leagueLabel)}</span>
         </div>
       </article>
     `;
@@ -472,15 +312,61 @@ function renderEvents() {
 function renderFavorites() {
   elements.favoriteCount.textContent = String(state.favorites.length);
   if (!state.favorites.length) {
-    elements.favorites.innerHTML = `<span class="empty-small">Noch keine Favoriten</span>`;
+    elements.favorites.innerHTML = `<span class="empty-small" role="status">Noch keine Favoriten</span>`;
     return;
   }
   elements.favorites.innerHTML = state.favorites.map((team) => `
-    <button class="favorite-pill" type="button" data-team="${escapeAttribute(team)}">${team} ×</button>
+    <button class="favorite-pill" type="button" data-team="${escapeAttribute(team)}" aria-label="${escapeAttribute(team)} aus Favoriten entfernen">${escapeHtml(team)} ×</button>
   `).join("");
   document.querySelectorAll(".favorite-pill").forEach((button) => {
     button.addEventListener("click", () => toggleFavorite(button.dataset.team));
   });
+}
+
+function renderMonitoring(sources) {
+  if (!sources.length) {
+    elements.monitoringList.innerHTML = `<div class="empty-small" role="status">Noch keine Importläufe.</div>`;
+    return;
+  }
+
+  elements.monitoringList.innerHTML = sources.map((source) => {
+    const status = String(source.status || "unknown");
+    const label = statusLabel(status);
+    const eventText = source.eventCount === null || source.eventCount === undefined
+      ? "keine Events"
+      : `${source.eventCount} Events`;
+    const finished = source.finishedAt ? formatDateTime(source.finishedAt) : "noch nie";
+    const detail = source.error || (source.warnings || []).join(" ") || eventText;
+    return `
+      <article class="monitoring-item" data-status="${escapeAttribute(status)}">
+        <div>
+          <strong>${escapeHtml(source.name || source.feedId)}</strong>
+          <span>${escapeHtml(finished)} · ${escapeHtml(eventText)}</span>
+        </div>
+        <div class="status-pill" data-status="${escapeAttribute(status)}">${escapeHtml(label)}</div>
+        <p>${escapeHtml(detail)}</p>
+      </article>
+    `;
+  }).join("");
+}
+
+function statusLabel(status) {
+  const labels = {
+    success: "OK",
+    warning: "Warnung",
+    error: "Fehler",
+    never_run: "Neu",
+  };
+  return labels[status] || "Unklar";
+}
+
+function formatDateTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("de-DE", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function toggleFavorite(team) {
@@ -496,6 +382,15 @@ function toggleFavorite(team) {
 
 function escapeAttribute(value) {
   return String(value || "").replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 async function openAppleCalendar() {
@@ -546,8 +441,12 @@ function escapeHtml(value) {
 elements.liveMode.addEventListener("click", () => setMode(false));
 elements.sampleMode.addEventListener("click", () => setMode(true));
 elements.refreshButton.addEventListener("click", loadEvents);
+elements.refreshMonitoring.addEventListener("click", loadMonitoring);
+elements.themeToggle.addEventListener("click", toggleTheme);
 elements.appleButton.addEventListener("click", openAppleCalendar);
 elements.copyFeedButton.addEventListener("click", copyFeedLink);
+elements.sourceCandidateFilter.addEventListener("input", renderSourceCandidates);
+elements.includeRiskySources.addEventListener("change", loadSourceCandidates);
 elements.teamSearch.addEventListener("input", () => {
   window.clearTimeout(elements.teamSearch._timer);
   elements.teamSearch._timer = window.setTimeout(loadEvents, 250);
@@ -559,8 +458,14 @@ $("clearFavorites").addEventListener("click", () => {
   saveFavorites();
   loadEvents();
 });
+systemDark.addEventListener("change", () => {
+  if (state.theme === "system") applyTheme(true);
+});
 
+applyTheme();
 renderFavorites();
 updateFeedLinks();
 loadCalendars();
 loadEvents();
+loadMonitoring();
+loadSourceCandidates();

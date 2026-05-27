@@ -5,14 +5,16 @@ import json
 import os
 import platform
 import subprocess
+import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse
 from zoneinfo import ZoneInfo
 
+from sports_source_registry import list_source_candidates, source_candidate_sports
 from yourcalendar_poc import (
     DEFAULT_OUTPUT,
     DEFAULT_TIMEZONE,
@@ -21,6 +23,7 @@ from yourcalendar_poc import (
     POCError,
     build_sample_events,
     default_football_season,
+    fetch_nager_holiday_events,
     fetch_json_list,
     fetch_openligadb_multi_league_events,
     render_ics,
@@ -33,11 +36,25 @@ from yourcalendar_sources import source_monitor_payload, source_plan_payload
 ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "web"
 OUTPUT_PATH = ROOT / DEFAULT_OUTPUT
-RUN_HISTORY_PATH = ROOT / "output" / "source-runs.json"
+FEED_CACHE_DIR = ROOT / "output" / "feeds"
+IMPORT_RUNS_PATH = ROOT / "output" / "import-runs.json"
 CALENDAR_NAME = "YourCalendar German Football"
 SAMPLE_CALENDAR_NAME = "YourCalendar Sample Football"
+HOLIDAY_CALENDAR_NAME = "YourCalendar German Holidays"
 CURRENT_FEED_ID = "current"
-FEED_PARAM_KEYS = ("sample", "leagues", "team", "favorites", "includePast", "season")
+FEED_PARAM_KEYS = (
+    "sample",
+    "source",
+    "leagues",
+    "team",
+    "favorites",
+    "includePast",
+    "season",
+    "country",
+    "subdivision",
+    "year",
+    "maxEvents",
+)
 
 
 @dataclass(frozen=True)
@@ -231,62 +248,15 @@ PUBLISHED_CALENDARS = {
         },
         sample=True,
     ),
-    "europe-all-sports": PublishedCalendar(
-        feed_id="europe-all-sports",
-        category_id="sports",
-        name="Europa Sportarten",
-        description="Auswahl aller geplanten Sportarten mit Europa-Fokus. Feeds werden nach Datenquellen-Anbindung freigeschaltet.",
-        source_label="Provider noch nicht angebunden",
-        source_type="planned",
-        source_type_label="Datenquelle offen",
-        quality_level="planned",
-        quality_label="Provider nötig",
-        update_policy="Noch kein produktiver Importjob. Auswahl ist als Produktstruktur vorbereitet.",
-        reliability_note="Sportarten sind auswählbar, aber ohne angebundene Quelle werden noch keine echten Termine angezeigt.",
-        data_warnings=(
-            "Keine Live-Termine ohne verifizierte Datenquelle.",
-            "Ligen, Verbände und Rechte müssen je Sportart geklärt werden.",
-            "Europaweite Vollständigkeit ist erst nach Provider- und Quellenprüfung belastbar.",
-        ),
-        params=None,
-    ),
-    "world-europe-championships": PublishedCalendar(
-        feed_id="world-europe-championships",
-        category_id="sports",
-        name="WM & EM laufende Turniere",
-        description="Welt- und Europameisterschaften sollen sichtbar werden, sobald sie laufen oder kurz bevorstehen.",
-        source_label="Meisterschafts-Provider noch nicht angebunden",
-        source_type="planned",
-        source_type_label="Datenquelle offen",
-        quality_level="planned",
-        quality_label="Provider nötig",
-        update_policy="Geplant ist ein Import, der laufende und bevorstehende WM-/EM-Turniere erkennt.",
-        reliability_note="Ohne Turnierquelle kann YourCalendar noch nicht sicher wissen, welche WM oder EM gerade läuft.",
-        data_warnings=(
-            "WM/EM kann je Sportart, Verband und Altersklasse unterschiedlich definiert sein.",
-            "Turnierzeiträume, Zeitzonen und Spielplanänderungen brauchen eine verlässliche Quelle.",
-            "Bis zur Quellenanbindung werden keine echten WM-/EM-Termine behauptet.",
-        ),
-        params=None,
-    ),
-    "global-combat-events": PublishedCalendar(
-        feed_id="global-combat-events",
-        category_id="combat",
-        name="Kampfsport weltweit",
-        description="MMA, Boxen, Kickboxen, Muay Thai, Grappling und weitere Kampfsport-Events weltweit.",
-        source_label="Globaler Kampfsport-Provider noch nicht angebunden",
-        source_type="planned",
-        source_type_label="Datenquelle offen",
-        quality_level="planned",
-        quality_label="Provider nötig",
-        update_policy="Noch kein produktiver Importjob. Weltweite Fight Cards brauchen Provider- und Rechteklärung.",
-        reliability_note="Sämtliche weltweiten Kampfsportveranstaltungen können erst mit belastbarer globaler Quelle angezeigt werden.",
-        data_warnings=(
-            "Ohne Provider sind keine vollständigen weltweiten Fight Cards gesichert.",
-            "Regionale Shows, Verschiebungen, Weight-ins und kurzfristige Gegnerwechsel sind datenintensiv.",
-            "Mehrere Quellen können nötig sein, weil kein einzelner freier Feed gesichert alle Kampfsportarten abdeckt.",
-        ),
-        params=None,
+    "holidays-germany": PublishedCalendar(
+        feed_id="holidays-germany",
+        name=HOLIDAY_CALENDAR_NAME,
+        description="Deutsche Feiertage aus dem Nager.Date PoC-Importer.",
+        params={
+            "sample": "false",
+            "source": "holidays",
+            "country": "DE",
+        },
     ),
 }
 
@@ -362,6 +332,8 @@ def params_from_calendar(calendar: PublishedCalendar) -> dict[str, list[str]]:
 
 
 def calendar_name_for_params(params: dict[str, list[str]]) -> str:
+    if params.get("source", [""])[0] == "holidays":
+        return HOLIDAY_CALENDAR_NAME
     return SAMPLE_CALENDAR_NAME if params.get("sample", ["false"])[0] == "true" else CALENDAR_NAME
 
 
@@ -382,6 +354,20 @@ def published_feed_path(feed_id: str) -> str:
 def feed_filename(feed_id: str) -> str:
     safe_id = "".join(char for char in feed_id if char.isalnum() or char in ("-", "_"))
     return f"yourcalendar-{safe_id or CURRENT_FEED_ID}.ics"
+
+
+def cached_feed_path(feed_id: str) -> Path:
+    return FEED_CACHE_DIR / feed_filename(feed_id)
+
+
+def load_cached_feed(feed_id: str, query: str = "") -> str | None:
+    if query or feed_id not in PUBLISHED_CALENDARS:
+        return None
+    path = cached_feed_path(feed_id)
+    if not path.exists():
+        return None
+    with path.open(encoding="utf-8", newline="") as handle:
+        return handle.read()
 
 
 def resolve_feed(feed_id: str, query: str) -> tuple[str, dict[str, list[str]], bool]:
@@ -511,6 +497,18 @@ def load_events(params: dict[str, list[str]]) -> list:
     use_sample = params.get("sample", ["false"])[0] == "true"
     if use_sample:
         return build_sample_events(DEFAULT_TIMEZONE)
+    if params.get("source", [""])[0] == "holidays":
+        year_raw = params.get("year", [""])[0]
+        max_events_raw = params.get("maxEvents", [""])[0]
+        year = int(year_raw) if year_raw.isdigit() else datetime.now(timezone.utc).year
+        max_events = int(max_events_raw) if max_events_raw.isdigit() else None
+        return fetch_nager_holiday_events(
+            year=year,
+            country_code=params.get("country", ["DE"])[0] or "DE",
+            subdivision=params.get("subdivision", [""])[0],
+            max_events=max_events,
+            tz_name=DEFAULT_TIMEZONE,
+        )
 
     leagues = selected_leagues(params)
     include_past = params.get("includePast", ["false"])[0] == "true"
@@ -544,110 +542,23 @@ def load_events(params: dict[str, list[str]]) -> list:
     return events
 
 
-def source_health_payload(
-    use_sample: bool,
-    count: int,
-    params: dict[str, list[str]],
-    error: str | None = None,
-    checked_at: datetime | None = None,
-) -> dict:
-    checked = catalog_timestamp(checked_at)
-    monitor_observation = {
-        "sourceId": "yourcalendar-sample" if use_sample else "openligadb-football",
-        "checkedAt": checked.isoformat(),
-        "checkedLabel": f"Geprüft {format_catalog_timestamp(checked)}",
-        "eventCount": count,
-    }
-    if use_sample:
-        return {
-            "status": "sample",
-            "label": "Sample",
-            "title": "Sample-Daten aktiv",
-            "detail": "Diese Termine sind Testdaten und keine echten Spiele.",
-            "hints": ["Zum Prüfen der echten Quelle in den Live-Modus wechseln."],
-            "selectedLeagues": selected_league_names(params),
-            "monitorObservation": {
-                **monitor_observation,
-                "status": "ok",
-                "message": "Sample-Daten wurden lokal erzeugt.",
-            },
-        }
+SOURCES_PATH = ROOT / "sources.json"
 
-    if error:
-        return {
-            "status": "error",
-            "label": "Quelle gestört",
-            "title": "OpenLigaDB konnte nicht gelesen werden",
-            "detail": "Der Kalender bleibt verfügbar, aber dieser Abruf hat keine verlässlichen Live-Daten geliefert.",
-            "hints": [
-                "Netzwerk, API-Erreichbarkeit und Liga-Auswahl prüfen.",
-                "Sample-Modus nutzen, wenn nur der Abo-Flow getestet werden soll.",
-            ],
-            "selectedLeagues": selected_league_names(params),
-            "technicalDetail": error,
-            "monitorObservation": {
-                **monitor_observation,
-                "status": "error",
-                "message": "Der OpenLigaDB-Abruf ist fehlgeschlagen.",
-                "technicalDetail": error,
-            },
-        }
 
-    if count == 0:
-        season = params.get("season", [""])[0] or str(default_football_season())
-        return {
-            "status": "empty",
-            "label": "Keine Termine",
-            "title": "Keine Spiele für diese Auswahl",
-            "detail": (
-                "OpenLigaDB hat für diese Ligen, Saison und Filter keine Termine geliefert. "
-                "Das kann bei Saisonende, noch nicht veröffentlichten Spielplänen oder engen Teamfiltern passieren."
-            ),
-            "hints": [
-                f"Geprüfte Saison: {season}.",
-                "Gespielte Spiele anzeigen oder Teamfilter leeren.",
-                "Andere Liga auswählen, falls der Wettbewerb noch nicht terminiert ist.",
-            ],
-            "selectedLeagues": selected_league_names(params),
-            "monitorObservation": {
-                **monitor_observation,
-                "status": "empty",
-                "message": "Der OpenLigaDB-Abruf war erreichbar, lieferte aber keine Termine.",
-            },
-        }
-
+def build_source(data: dict) -> tuple[dict | None, str | None]:
+    for field in ("name", "url"):
+        if not str(data.get(field, "")).strip():
+            return None, f"Missing required field: {field}"
     return {
-        "status": "ok",
-        "label": "OpenLigaDB",
-        "title": "OpenLigaDB liefert Termine",
-        "detail": (
-            "Freie Spielplan-/Ergebnisdaten für den POC. "
-            "Für garantierte Realtime-Daten braucht es später einen Provider mit SLA."
-        ),
-        "hints": [
-            "Anstoßzeiten und Verlegungen bleiben als POC-Qualitätsrisiko markiert.",
-        ],
-        "selectedLeagues": selected_league_names(params),
-        "monitorObservation": {
-            **monitor_observation,
-            "status": "ok",
-            "message": "Der OpenLigaDB-Abruf lieferte Termine.",
-        },
-    }
-
-
-def persist_monitor_observation(observation: dict) -> dict:
-    checked_at = datetime.fromisoformat(observation["checkedAt"])
-    record = SourceRunRecord(
-        source_id=observation["sourceId"],
-        status=observation["status"],
-        checked_at=checked_at,
-        checked_label=observation["checkedLabel"],
-        event_count=int(observation["eventCount"]),
-        message=observation["message"],
-        technical_detail=observation.get("technicalDetail"),
-    )
-    return record_source_run(RUN_HISTORY_PATH, record)
+        "id": str(uuid.uuid4()),
+        "name": str(data["name"]).strip(),
+        "url": str(data["url"]).strip(),
+        "category": str(data.get("category", "")).strip(),
+        "license": str(data.get("license", "")).strip(),
+        "status": str(data.get("status", "draft")).strip() or "draft",
+        "lastImport": None,
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+    }, None
 
 
 class YourCalendarHandler(SimpleHTTPRequestHandler):
@@ -656,6 +567,16 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path == "/api/sources":
+            self.handle_sources_get()
+            return
+        if parsed.path == "/api/source-candidates":
+            self.handle_source_candidates_get(parsed.query)
+            return
+        if parsed.path.startswith("/api/sources/"):
+            source_id = parsed.path.removeprefix("/api/sources/")
+            self.handle_sources_get_one(source_id)
+            return
         if parsed.path == "/api/events":
             self.handle_events(parsed.query)
             return
@@ -664,6 +585,9 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
             return
         if parsed.path == "/api/calendars":
             self.handle_calendars()
+            return
+        if parsed.path == "/api/import-status":
+            self.handle_import_status()
             return
         if parsed.path == "/api/open-apple":
             self.handle_open_apple(parsed.query)
@@ -675,6 +599,29 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
             self.handle_legacy_download(parsed.query)
             return
         super().do_GET()
+
+    def do_POST(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path == "/api/sources":
+            self.handle_sources_post()
+            return
+        self.send_error(HTTPStatus.NOT_FOUND, "Endpoint not supported")
+
+    def do_PATCH(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path.startswith("/api/sources/"):
+            source_id = parsed.path.removeprefix("/api/sources/")
+            self.handle_sources_patch(source_id)
+            return
+        self.send_error(HTTPStatus.NOT_FOUND, "Endpoint not supported")
+
+    def do_DELETE(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path.startswith("/api/sources/"):
+            source_id = parsed.path.removeprefix("/api/sources/")
+            self.handle_sources_delete(source_id)
+            return
+        self.send_error(HTTPStatus.NOT_FOUND, "Endpoint not supported")
 
     def do_HEAD(self) -> None:
         parsed = urlparse(self.path)
@@ -692,6 +639,7 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
         try:
             events = load_events(normalized_params)
             use_sample = normalized_params.get("sample", ["false"])[0] == "true"
+            source = normalized_params.get("source", ["football"])[0]
             feed_url = feed_path_for_params(normalized_params)
             source_health = source_health_payload(use_sample, len(events), normalized_params)
             source_health["monitorObservation"] = persist_monitor_observation(
@@ -709,7 +657,7 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
                     "downloadUrl": feed_url,
                     "sampleFeedUrl": published_feed_path("sample-ksc"),
                     "publishedFeedUrl": published_feed_path("football-germany"),
-                    "sourceNote": source_health["detail"],
+                    "sourceNote": source_note(use_sample, source, len(events)),
                 }
             )
         except (POCError, ValueError) as exc:
@@ -746,6 +694,16 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
                 "sourceMonitor": source_monitor_payload(latest_runs_by_source(RUN_HISTORY_PATH)),
                 "categories": categories,
                 "calendars": calendars,
+            }
+        )
+
+    def handle_import_status(self) -> None:
+        runs = load_import_runs()
+        self.send_json(
+            {
+                "ok": True,
+                "sources": build_import_status(runs),
+                "runs": runs[-20:],
             }
         )
 
@@ -808,8 +766,121 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
         except (POCError, ValueError) as exc:
             self.send_error(HTTPStatus.BAD_GATEWAY, str(exc))
 
+    def handle_open_apple(self, query: str) -> None:
+        if platform.system() != "Darwin":
+            self.send_json(
+                {"ok": False, "error": "Apple Calendar import is only available on macOS."},
+                status=HTTPStatus.BAD_REQUEST,
+            )
+            return
+        try:
+            params = normalize_feed_params(parse_qs(query))
+            write_ics(load_events(params), OUTPUT_PATH, calendar_name_for_params(params))
+            subprocess.run(["open", str(OUTPUT_PATH)], check=True)
+            self.send_json({"ok": True, "message": "Apple Calendar was opened."})
+        except (POCError, ValueError) as exc:
+            self.send_json(
+                {"ok": False, "error": str(exc)},
+                status=HTTPStatus.BAD_GATEWAY,
+            )
+        except subprocess.CalledProcessError as exc:
+            self.send_json(
+                {"ok": False, "error": f"Could not open Apple Calendar: {exc}"},
+                status=HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
+
+    def handle_sources_get(self) -> None:
+        sources = load_sources()
+        self.send_json({"ok": True, "sources": sources})
+
+    def handle_source_candidates_get(self, query: str) -> None:
+        params = parse_qs(query)
+        sport = params.get("sport", [""])[0].strip() or None
+        include_risky = parse_bool(params.get("includeRisky", ["true"])[0], default=True)
+        candidates = list_source_candidates(sport=sport, include_risky=include_risky)
+        self.send_json(
+            {
+                "ok": True,
+                "count": len(candidates),
+                "sports": source_candidate_sports(),
+                "candidates": candidates,
+                "note": (
+                    "Community registry only. Candidates are not active production imports "
+                    "until license, rate limit and reliability checks pass."
+                ),
+            }
+        )
+
+    def handle_sources_get_one(self, source_id: str) -> None:
+        sources = load_sources()
+        for source in sources:
+            if source["id"] == source_id:
+                self.send_json({"ok": True, "source": source})
+                return
+        self.send_error(HTTPStatus.NOT_FOUND, "Source not found")
+
+    def handle_sources_post(self) -> None:
+        length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(length).decode()
+        try:
+            data = json.loads(body)
+        except json.JSONDecodeError:
+            self.send_json({"ok": False, "error": "Invalid JSON"}, status=HTTPStatus.BAD_REQUEST)
+            return
+        source, error = build_source(data)
+        if error:
+            self.send_json({"ok": False, "error": error}, status=HTTPStatus.BAD_REQUEST)
+            return
+        sources = load_sources()
+        sources.append(source)
+        save_sources(sources)
+        self.send_json({"ok": True, "source": source}, status=HTTPStatus.CREATED)
+
+    def handle_sources_patch(self, source_id: str) -> None:
+        length = int(self.headers.get('Content-Length', 0))
+        body = self.rfile.read(length).decode()
+        try:
+            data = json.loads(body)
+        except json.JSONDecodeError:
+            self.send_json({"ok": False, "error": "Invalid JSON"}, status=HTTPStatus.BAD_REQUEST)
+            return
+        sources = load_sources()
+        for source in sources:
+            if source["id"] == source_id:
+                # Update allowed fields
+                if "name" in data:
+                    source["name"] = data["name"]
+                if "url" in data:
+                    source["url"] = data["url"]
+                if "category" in data:
+                    source["category"] = data["category"]
+                if "license" in data:
+                    source["license"] = data["license"]
+                if "status" in data:
+                    source["status"] = data["status"]
+                if "lastImport" in data:
+                    source["lastImport"] = data["lastImport"]
+                source["updatedAt"] = datetime.now(timezone.utc).isoformat()
+                save_sources(sources)
+                self.send_json({"ok": True, "source": source})
+                return
+        self.send_error(HTTPStatus.NOT_FOUND, "Source not found")
+
+    def handle_sources_delete(self, source_id: str) -> None:
+        sources = load_sources()
+        new_sources = [s for s in sources if s["id"] != source_id]
+        if len(new_sources) == len(sources):
+            self.send_error(HTTPStatus.NOT_FOUND, "Source not found")
+            return
+        save_sources(new_sources)
+        self.send_json({"ok": True, "message": "Source deleted"})
+
     def serve_feed(self, feed_id: str, query: str, disposition: str, send_body: bool = True) -> None:
-        content, is_sample = render_feed(feed_id, query)
+        content = load_cached_feed(feed_id, query)
+        if content is None:
+            content, is_sample = render_feed(feed_id, query)
+        else:
+            is_sample = PUBLISHED_CALENDARS[feed_id].sample
         content_bytes = content.encode("utf-8")
         if is_sample and "[SAMPLE]" not in content:
             self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Sample feed is not clearly marked.")
@@ -839,6 +910,99 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
         scheme = forwarded_proto.split(",")[0].strip() if forwarded_proto else "http"
         host = self.headers.get("Host", "127.0.0.1:8765")
         return f"{scheme}://{host}{path}"
+
+
+def load_sources() -> list:
+    if not SOURCES_PATH.exists():
+        return []
+    try:
+        data = json.loads(SOURCES_PATH.read_text())
+    except json.JSONDecodeError:
+        return []
+    return data if isinstance(data, list) else []
+
+
+def load_import_runs() -> list[dict]:
+    if not IMPORT_RUNS_PATH.exists():
+        return []
+    try:
+        data = json.loads(IMPORT_RUNS_PATH.read_text())
+    except json.JSONDecodeError:
+        return []
+    return data if isinstance(data, list) else []
+
+
+def build_import_status(runs: list[dict]) -> list[dict]:
+    latest_by_feed: dict[str, dict] = {}
+    for run in reversed(runs):
+        feed_id = str(run.get("feedId") or "")
+        if feed_id and feed_id not in latest_by_feed:
+            latest_by_feed[feed_id] = run
+
+    statuses = []
+    for feed_id, calendar in PUBLISHED_CALENDARS.items():
+        latest = latest_by_feed.get(feed_id)
+        if not latest:
+            statuses.append(
+                {
+                    "feedId": feed_id,
+                    "name": calendar.name,
+                    "status": "never_run",
+                    "eventCount": None,
+                    "finishedAt": None,
+                    "warnings": [],
+                    "error": None,
+                    "sample": calendar.sample,
+                }
+            )
+            continue
+        statuses.append(
+            {
+                "feedId": feed_id,
+                "name": calendar.name,
+                "status": latest.get("status") or "unknown",
+                "eventCount": latest.get("eventCount"),
+                "finishedAt": latest.get("finishedAt"),
+                "warnings": latest.get("warnings") or [],
+                "error": latest.get("error"),
+                "sample": latest.get("sample"),
+            }
+        )
+    return statuses
+
+
+def save_sources(sources: list) -> None:
+    SOURCES_PATH.write_text(json.dumps(sources, ensure_ascii=False, indent=2) + "\n")
+
+
+def parse_bool(value: str, default: bool = False) -> bool:
+    if value is None:
+        return default
+    normalized = str(value).strip().casefold()
+    if normalized in {"1", "true", "yes", "y", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "n", "off"}:
+        return False
+    return default
+
+
+def source_note(use_sample: bool, source: str, count: int) -> str:
+    if use_sample:
+        return "Sample-Modus: Diese Termine sind Testdaten und keine echten Spiele."
+    if source == "holidays":
+        return (
+            "Nager.Date Feiertagsdaten für den PoC. "
+            "Nicht als amtliche Quelle oder finale Rechtsentscheidung behandeln."
+        )
+    if count == 0:
+        return (
+            "OpenLigaDB liefert für diese Filter aktuell keine kommenden Termine. "
+            "Saisonende, Liga-Auswahl oder Filter können der Grund sein."
+        )
+    return (
+        "OpenLigaDB: freie Spielplan-/Ergebnisdaten für den POC. "
+        "Für garantierte Realtime-Daten braucht es später einen Provider mit SLA."
+    )
 
 
 def main() -> None:
