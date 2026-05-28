@@ -146,6 +146,19 @@ test("primary interactive controls expose accessible labels or text", async () =
   }
 });
 
+test("mobile shell exposes skip link and quick navigation targets", async () => {
+  const dom = await loadApp();
+  const { document } = dom.window;
+
+  assert.equal(document.querySelector(".skip-link").getAttribute("href"), "#discoverTitle");
+  const nav = document.querySelector(".quick-nav");
+  assert.equal(nav.getAttribute("aria-label"), "Schnellnavigation");
+  assert.deepEqual(
+    [...nav.querySelectorAll("a")].map((link) => link.getAttribute("href")),
+    ["#discoverTitle", "#subscriptionTitle", "#previewFilters"],
+  );
+});
+
 test("event list exposes accessible empty and busy states", async () => {
   const dom = await loadApp();
   const { document } = dom.window;

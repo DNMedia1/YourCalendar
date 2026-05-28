@@ -6,10 +6,10 @@ damit Agenten nicht gegeneinander arbeiten.
 
 ## Aktueller Repo-Stand
 
-- Stand: 2026-05-28 20:39 Europe/Berlin.
-- `main` ist auf GitHub nach PR #46 gruen und lokal fast-forwarded.
-- Letzter bekannter `main`-Commit: `d1f8899 Merge pull request #46 from DNMedia1/docs/issue-15-privacy-legal`.
-- App Checks fuer PR #46 waren erfolgreich; offene PR #37 betrifft weiterhin Issue #14.
+- Stand: 2026-05-28 21:47 Europe/Berlin.
+- `main` ist auf GitHub nach PR #47 gruen und lokal fast-forwarded.
+- Letzter bekannter `main`-Commit: `e14eee0 Merge pull request #47 from DNMedia1/feat/issue-24-calendar-discovery`.
+- App Checks fuer PR #47 waren erfolgreich; offene PR #37 betrifft weiterhin Issue #14.
 - Private Knowledgebase-Dateien bleiben lokal und duerfen nicht committed
   werden.
 
@@ -25,6 +25,20 @@ damit Agenten nicht gegeneinander arbeiten.
 - Vor dem Stoppen unten eine Handoff-Notiz ergaenzen.
 
 ## Aktueller Intake-Snapshot
+
+### 2026-05-28 21:47 Europe/Berlin - Codex - Intake
+- Repo-Branch: `feat/issue-25-mobile-first-polish` auf aktuellem `main` (`e14eee0`).
+- Worktree clean: nein, nur tracked `__pycache__`-Dateien waren vor Start lokal geaendert und werden nicht staged.
+- GitHub PRs geprueft: PR #37 fuer Issue #14 ist offen und fordert Review von `eskar87` an.
+- Offene Issues geprueft: #14, #20-25, #40-42; Cypress-Suche ergab kein bestehendes Cypress-Issue.
+- Gewaehltes Issue: #25 [P1][Story] Mobile-first responsive Website umsetzen.
+- Warum dieses Issue: User will Richtung fertige Website weitergehen; #25 ist die direkte Mobile-first-Story, #23 ist `eskar87` zugewiesen, #14 hat bereits PR #37.
+- Claim-Status: GitHub-Kommentar gepostet (#25-issuecomment-4567607740).
+- Branch: `feat/issue-25-mobile-first-polish`
+- Erwartete Dateien: `web/index.html`, `web/styles.css`, `web/mobile.css`, `tests/ui.test.mjs`, `docs/responsive-qa.md`, `docs/agent-status.md`.
+- Erste Checks: `git status --short --branch`, offene GitHub PRs/Issues, Issue #25 gelesen.
+- Blocker/Unsicherheit: PR soll nicht gemergt werden, sondern offen fuer Review von `eskar87` bleiben.
+- Zusatz: Cypress-Follow-up als Issue #48 angelegt.
 
 ### 2026-05-28 18:48 Europe/Berlin - Codex - Intake
 - Repo-Branch: `feat/issue-24-calendar-discovery` auf aktuellem `main` (`d1f8899`).
@@ -66,6 +80,18 @@ damit Agenten nicht gegeneinander arbeiten.
 - Blocker/Unsicherheit: Kein gesondertes GitHub-Label-Schema vorhanden; Auswahlregel nutzt daher Titel-Prioritaeten wie `[P0]`, `[P1]`, `[P2]`.
 
 ## Handoff Log
+
+### 2026-05-28 21:53 Europe/Berlin - Codex - feat/issue-25-mobile-first-polish
+- Ziel: Mobile-first Website-Polish fuer Issue #25 umsetzen, ohne automatisch zu mergen.
+- GitHub-Bezug: Issue #25; Cypress-Follow-up Issue #48; geplanter PR mit Review-Request an `eskar87`.
+- Status: Lokale Umsetzung fertig; bereit fuer Commit, Push und offenen PR.
+- Claim/Issue-Status: Issue #25 per Kommentar geclaimt.
+- Geaenderte Dateien: `web/index.html`, `web/styles.css`, `web/mobile.css`, `tests/ui.test.mjs`, `docs/responsive-qa.md`, `docs/agent-status.md`.
+- Tests: `python3 -B -m py_compile web_app.py yourcalendar_poc.py`, `npm test`, `npm run build-storybook`, `git diff --check`.
+- Browser-QA: In-App-Browser auf `http://localhost:8765/`; Desktop 1280x720, Tablet 768x1024 und Phone 390x844 geprueft. Keine Console-Warnungen/-Fehler, keine horizontale Seitenueberbreite, Quick-Nav zu Filtern funktioniert.
+- Neu gewonnenes Wissen: Browser-Cache auf `127.0.0.1` kann alte CSS-Dateien halten; fuer QA wurde `localhost` als frische Origin genutzt. Die App selbst ist mit den aktuellen CSS-Dateien korrekt.
+- Offene Risiken: Echte Safari-/Android-Chrome-Geraete sind noch nicht manuell getestet; Cypress-Workflow ist als Issue #48 geplant, aber noch nicht implementiert.
+- Naechster sinnvoller Schritt: PR offen lassen, `eskar87` Review abwarten, danach ggf. Feedback einarbeiten.
 
 ### 2026-05-28 20:39 Europe/Berlin - Codex - feat/issue-24-calendar-discovery
 - Ziel: Oeffentliche Website-Struktur fuer Kalenderentdeckung als Katalog verbessern (Issue #24).
