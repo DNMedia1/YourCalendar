@@ -28,6 +28,10 @@ be distilled into tracked docs, GitHub issues or PR descriptions.
   status.
 - Mark assumptions clearly.
 - Keep the Yobsti/Core connection untouched unless explicitly asked.
+- Run the session intake workflow from `docs/agent-collaboration.md` before
+  choosing work.
+- If no task is named by the user, pick and claim the next GitHub issue using
+  the documented priority rules.
 - Work on a task branch.
 - Use Conventional Commits.
 - Update `docs/agent-status.md` before stopping or handing work to another

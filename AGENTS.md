@@ -29,6 +29,11 @@ be committed.
 - Use Conventional Commits.
 - Keep private files, tokens, `.env`, `.claude/` and local knowledge-base
   snapshots out of Git.
+- At the start of every task, run the session intake workflow from
+  `docs/agent-collaboration.md`.
+- If the user has not named a task or issue, select the next GitHub issue using
+  the priority rules in `docs/agent-collaboration.md` and claim it before
+  implementation.
 - Before stopping, update the handoff state described in
   `docs/agent-collaboration.md`.
 
