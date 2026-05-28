@@ -26,6 +26,19 @@ damit Agenten nicht gegeneinander arbeiten.
 
 ## Aktueller Intake-Snapshot
 
+### 2026-05-28 19:30 Europe/Berlin - Claude Code - Intake
+- Repo-Branch: `main` (sauber), dann `docs/issue-15-privacy-legal` erstellt.
+- Worktree clean: yes.
+- GitHub PRs geprueft: PR#37 (feat/issue-14-calendar-integration-scope, by DNMedia1, offen) - kein Codex-Branch aktiv.
+- Offene Issues geprueft: #14, #15, #20-25, #40-42.
+- Gewaehltes Issue: #15 [P1][Story] Datenschutz- und Impressumsbedarf klaeren.
+- Warum dieses Issue: Aeltestes unassigned P1-Story-Issue ohne laufenden Branch. #14 hat offenen PR, also naechstes ist #15.
+- Claim-Status: GitHub-Kommentar gepostet (#15-issuecomment-4566182372).
+- Branch: `docs/issue-15-privacy-legal`
+- Erwartete Dateien: `docs/privacy-legal-baseline.md`, `docs/agent-status.md`.
+- Erste Checks: py_compile OK.
+- Blocker/Unsicherheit: Kein Blocker. Offene Rechtsfragen muessen durch Betreiber beantwortet werden, nicht durch Agenten.
+
 ### 2026-05-28 17:58 Europe/Berlin - Codex - Intake
 - Repo-Branch: `feat/agent-intake-workflow`
 - Worktree clean: yes, vor Branch-Erstellung.
@@ -40,6 +53,19 @@ damit Agenten nicht gegeneinander arbeiten.
 - Blocker/Unsicherheit: Kein gesondertes GitHub-Label-Schema vorhanden; Auswahlregel nutzt daher Titel-Prioritaeten wie `[P0]`, `[P1]`, `[P2]`.
 
 ## Handoff Log
+
+### 2026-05-28 19:45 Europe/Berlin - Claude Code - docs/issue-15-privacy-legal
+- Ziel: Datenschutz-, Impressums- und Verantwortlichkeitsbedarf fuer den MVP dokumentieren (Issue #15).
+- GitHub-Bezug: Issue #15 (Datenschutz- und Impressumsbedarf klaeren), geclaimed per Kommentar.
+- Status: docs/privacy-legal-baseline.md erstellt; bereit fuer PR und Codex-Review.
+- Claim/Issue-Status: Issue #15 geclaimed mit GitHub-Kommentar.
+- Geaenderte Dateien: `docs/privacy-legal-baseline.md` (neu), `docs/agent-status.md`.
+- Tests: `python3 -B -m py_compile web_app.py yourcalendar_poc.py` gruen. Nur Doku-Aenderung, keine Python-/JS-Logik betroffen.
+- Neu gewonnenes Wissen: `log_message` in `web_app.py:832` ist explizit ein No-op (HTTP-Anfragelogs abgeschaltet). Keine Cookies, kein serverseitiges Tracking im aktuellen MVP. Browser-Favoriten bleiben im localStorage. Oeffentliches Hosting wird aber IP-Adressen im Hoster-Log erzeugen.
+- Offene Risiken: Kein Rechtsgutachten; offene Punkte (Hoster-Wahl, AVV, verantwortliche Person) muessen vor Veroeffentlichung beantwortet werden. Drittquellen-Nutzungsbedingungen noch ungeprueft.
+- Naechster sinnvoller Schritt: PR mergen, dann naechstes P1-Story-Issue waehlen (#22 Performance/Accessibility oder #24 Website-Struktur).
+
+
 
 ### 2026-05-28 17:58 Europe/Berlin - Codex - feat/agent-intake-workflow
 - Ziel: Verbindliches Intake-, Issue-Pickup- und Wissensaustausch-Schema fuer Agenten ergaenzen.
