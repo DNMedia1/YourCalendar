@@ -17,6 +17,55 @@ function makeEvents(count) {
   }));
 }
 
+function makeCalendarPayload() {
+  return {
+    ok: true,
+    qualityLegend: [
+      { id: "community", label: "Community", description: "Freie Quelle ohne SLA." },
+      { id: "planned", label: "Geplant", description: "Noch ohne produktive Quelle." },
+    ],
+    sportsCoverage: { europeSports: [], globalCombatSports: [], championships: [] },
+    sourcePlan: { total: 0, active: 0, needsWork: 0, items: [] },
+    sourceMonitor: { total: 0, watching: 0, planned: 0, items: [] },
+    categories: [
+      {
+        id: "sports",
+        name: "Sport",
+        description: "Spielpläne und Wettbewerbe.",
+        calendarCount: 1,
+        calendars: [
+          {
+            id: "football-germany",
+            name: "YourCalendar German Football",
+            description: "Bundesliga und Pokal aus OpenLigaDB.",
+            sourceLabel: "OpenLigaDB, Community-Daten",
+            hasFeed: true,
+            feedUrl: "/feeds/football-germany.ics",
+            subscribeUrl: "http://127.0.0.1:8765/feeds/football-germany.ics",
+            status: "available",
+            statusLabel: "Verfügbar",
+            quality: {
+              level: "community",
+              label: "Community, kein SLA",
+              updatedLabel: "Katalogstand 28.05.2026 18:48 CEST",
+              updatePolicy: "Beim Abruf aktualisiert.",
+              reliabilityNote: "Keine Echtzeitgarantie.",
+              warnings: ["Anstoßzeiten prüfen."],
+            },
+          },
+        ],
+      },
+      {
+        id: "culture",
+        name: "Kultur",
+        description: "Kulturprogramme und Festivals.",
+        calendarCount: 0,
+        calendars: [],
+      },
+    ],
+  };
+}
+
 async function loadApp({ events = [] } = {}) {
   const html = await readFile(new URL("../web/index.html", import.meta.url), "utf8");
   const script = await readFile(new URL("../web/app.js", import.meta.url), "utf8");
@@ -25,14 +74,26 @@ async function loadApp({ events = [] } = {}) {
     runScripts: "dangerously",
     pretendToBeVisual: true,
     beforeParse(window) {
-      window.fetch = async () => ({
-        json: async () => ({
-          ok: true,
-          mode: "sample",
-          sourceNote: "Testdaten",
-          events,
-        }),
-      });
+      window.fetch = async (url) => {
+        const path = String(url);
+        if (path.includes("/api/calendars")) {
+          return { json: async () => makeCalendarPayload() };
+        }
+        if (path.includes("/api/import-status")) {
+          return { json: async () => ({ ok: true, sources: [] }) };
+        }
+        if (path.includes("/api/source-candidates")) {
+          return { json: async () => ({ ok: true, candidates: [] }) };
+        }
+        return {
+          json: async () => ({
+            ok: true,
+            mode: "sample",
+            sourceNote: "Testdaten",
+            events,
+          }),
+        };
+      };
       window.matchMedia = () => ({
         matches: false,
         media: "(prefers-color-scheme: dark)",
@@ -94,6 +155,19 @@ test("event list exposes accessible empty and busy states", async () => {
   assert.equal(eventList.getAttribute("aria-busy"), "false");
   assert.equal(emptyState.getAttribute("role"), "status");
   assert.match(emptyState.textContent, /Keine Spiele/);
+});
+
+test("calendar discovery renders public category and subscription context", async () => {
+  const dom = await loadApp();
+  const { document } = dom.window;
+
+  assert.match(document.querySelector(".catalog-intro").textContent, /ohne Login/);
+  assert.match(document.getElementById("categoryOverview").textContent, /Sport/);
+  assert.match(document.getElementById("categoryOverview").textContent, /1 von 1 abonnierbar/);
+  assert.match(document.getElementById("calendarCatalog").textContent, /OpenLigaDB/);
+  assert.match(document.getElementById("calendarCatalog").textContent, /Apple Kalender/);
+  assert.match(document.getElementById("calendarCatalog").textContent, /Google per URL/);
+  assert.match(document.getElementById("calendarCatalog").textContent, /Outlook aus dem Internet/);
 });
 
 test("long event lists render a capped visible set", async () => {

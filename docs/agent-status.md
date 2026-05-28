@@ -6,10 +6,10 @@ damit Agenten nicht gegeneinander arbeiten.
 
 ## Aktueller Repo-Stand
 
-- Stand: 2026-05-28 17:58 Europe/Berlin.
-- `main` ist auf GitHub nach PR #43 wieder gruen.
-- Letzter bekannter `main`-Commit: `2d49322 fix(ci): restore merged catalog checks`.
-- App Checks und Import Feeds waren nach diesem Stand erfolgreich.
+- Stand: 2026-05-28 20:39 Europe/Berlin.
+- `main` ist auf GitHub nach PR #46 gruen und lokal fast-forwarded.
+- Letzter bekannter `main`-Commit: `d1f8899 Merge pull request #46 from DNMedia1/docs/issue-15-privacy-legal`.
+- App Checks fuer PR #46 waren erfolgreich; offene PR #37 betrifft weiterhin Issue #14.
 - Private Knowledgebase-Dateien bleiben lokal und duerfen nicht committed
   werden.
 
@@ -25,6 +25,19 @@ damit Agenten nicht gegeneinander arbeiten.
 - Vor dem Stoppen unten eine Handoff-Notiz ergaenzen.
 
 ## Aktueller Intake-Snapshot
+
+### 2026-05-28 18:48 Europe/Berlin - Codex - Intake
+- Repo-Branch: `feat/issue-24-calendar-discovery` auf aktuellem `main` (`d1f8899`).
+- Worktree clean: nein, nur tracked `__pycache__`-Dateien sind lokal geaendert und werden nicht staged.
+- GitHub PRs geprueft: PR #37 fuer Issue #14 ist offen; PR #46 fuer Issue #15 wurde reviewed, korrigiert und gemerged.
+- Offene Issues geprueft: #14, #20-25, #40-42; Issue #15 ist nach PR #46 geschlossen.
+- Gewaehltes Issue: #24 [P1][Story] Oeffentliche Website-Struktur fuer Kalenderentdeckung gestalten.
+- Warum dieses Issue: #14 hat offenen PR, #15 ist erledigt, #23 ist vergeben, #22 hat bereits einen Remote-Branch; #24 ist ein konkreter P1-Story-Scope ohne kollidierenden PR.
+- Claim-Status: GitHub-Kommentar gepostet (#24-issuecomment-4566247896).
+- Branch: `feat/issue-24-calendar-discovery`
+- Erwartete Dateien: `web/index.html`, `web/app.js`, `web/styles.css`, `web/mobile.css`, `tests/ui.test.mjs`, `docs/agent-status.md`.
+- Erste Checks: `git status --short --branch`, offene GitHub PRs/Issues, PR #46 Review gegen Code.
+- Blocker/Unsicherheit: Project-Board-Felder koennen ohne passende GitHub-Rechte eventuell nicht automatisch aktualisiert werden.
 
 ### 2026-05-28 19:30 Europe/Berlin - Claude Code - Intake
 - Repo-Branch: `main` (sauber), dann `docs/issue-15-privacy-legal` erstellt.
@@ -53,6 +66,18 @@ damit Agenten nicht gegeneinander arbeiten.
 - Blocker/Unsicherheit: Kein gesondertes GitHub-Label-Schema vorhanden; Auswahlregel nutzt daher Titel-Prioritaeten wie `[P0]`, `[P1]`, `[P2]`.
 
 ## Handoff Log
+
+### 2026-05-28 20:39 Europe/Berlin - Codex - feat/issue-24-calendar-discovery
+- Ziel: Oeffentliche Website-Struktur fuer Kalenderentdeckung als Katalog verbessern (Issue #24).
+- GitHub-Bezug: Issue #24, Claim-Kommentar #24-issuecomment-4566247896.
+- Status: Umsetzung lokal fertig; bereit fuer Commit, Push und PR.
+- Claim/Issue-Status: Issue #24 bleibt bei Codex auf Branch `feat/issue-24-calendar-discovery`.
+- Geaenderte Dateien: `web/index.html`, `web/app.js`, `web/styles.css`, `tests/ui.test.mjs`, `docs/agent-status.md`.
+- Tests: `python3 -B -m py_compile web_app.py yourcalendar_poc.py`, `npm test`, `npm run build-storybook`, `git diff --check`.
+- Browser-QA: In-App-Browser auf `http://127.0.0.1:8765/`; Seite laedt, keine Console-Warnungen/-Fehler, Kategorie-Klick auf Kampfsport zeigt geplanten Kampfsportkalender mit Provider-/Feed-Hinweisen.
+- Neu gewonnenes Wissen: Der erste View muss den Katalog vor technischen Filtern erklaeren; pro Kalenderkarte sind Abo-Kontext und geplante Provider-Schritte hilfreicher als nur ein generischer Feed-Link.
+- Offene Risiken: Browser-Cache kann waehrend lokaler QA alte `styles.css` behalten; Code/CSS-Datei ist aktualisiert, frische Loads nutzen die Theme-Variablen.
+- Naechster sinnvoller Schritt: PR fuer #24 erstellen, Checks pruefen, danach Project Board/Issue-Status aktualisieren.
 
 ### 2026-05-28 18:39 Europe/Berlin - Codex - PR #46 Review
 - Ziel: Claude-PR #46 fuer Issue #15 pruefen und offensichtliche Datenschutz-Ungenauigkeit korrigieren.
