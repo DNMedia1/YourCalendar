@@ -217,8 +217,11 @@ browser checks expected before larger UI merges.
 Codex, Claude Code and other agents share the repo-owned workflow in
 `AGENTS.md`, `CLAUDE.md`, `docs/agent-collaboration.md` and
 `docs/agent-status.md`. GitHub Issues and the GitHub Project Board remain the
-planning source of truth. Local knowledge-base snapshots under `.claude/` or
-`.snapshots/.claude/knowledge_base/` stay private and must not be committed.
+planning source of truth. If no task is specified, agents must run the documented
+session intake, select the next open GitHub issue by priority, claim it, and
+write back handoff knowledge before stopping. Local knowledge-base snapshots
+under `.claude/` or `.snapshots/.claude/knowledge_base/` stay private and must
+not be committed.
 
 ## Next Technical Spikes
 
