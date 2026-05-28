@@ -44,7 +44,7 @@ Pflicht, unabhaengig davon, ob der Betreiber selbst Daten sammelt.
 | Nutzerkonten | Keine. Kein Login, keine Registrierung. | `web_app.py`, kein Session-/Cookie-Management |
 | HTTP-Anfragelogs | Deaktiviert. `log_message` gibt nichts aus. | `web_app.py:832` |
 | Cookies (Server-seitig) | Keine gesetzt. | `web_app.py`, kein `Set-Cookie`-Header |
-| Browser-Favoriten | Im `localStorage` des Browsers gespeichert, serverseitig nie uebertragen. | README, UI-Code |
+| Browser-Favoriten | Im `localStorage` des Browsers gespeichert. Bei aktiver Filterung werden Favoriten als `favorites`-Query an `/api/events` und Feed-URLs uebertragen, aber im App-Code nicht serverseitig persistiert. | `web/app.js`, `web_app.py` |
 | Importierte Eventdaten | Nur oeffentlich verfuegbare Spielplan- und Feiertagsdaten aus OpenLigaDB und Nager.Date. Kein Personenbezug. | `import_jobs.py` |
 | Feed-Dateien auf Disk | Gecachte ICS-Feeds und Snapshot-JSON lokal in `output/`. Kein Personenbezug. | `import_jobs.py:60-86` |
 | Externe API-Zugriffe | `import_jobs.py` ruft externe APIs ab (OpenLigaDB, Nager.Date, TheSportsDB). Die eigene IP-Adresse wird dabei gegenueber den Anbietern sichtbar. | `import_jobs.py` |
@@ -66,7 +66,7 @@ Sobald der MVP auf einem oeffentlichen Server laeuft:
 - **Kein serverseitiges Request-Logging** im Python-App-Code (`log_message` suppressed in `web_app.py:832`).
 - **Kein clientseitiges Tracking** (kein Google Analytics, kein Plausible, keine Pixels).
 - **Keine Drittanbieter-Scripts** im Frontend (kein CDN fuer React/Bootstrap/GA).
-- **Kein Feed-Abonnenten-Tracking**: Wer einen Feed abonniert, ist dem Server nicht bekannt.
+- **Kein Feed-Abonnenten-Tracking im App-Code**: Die App fuehrt keine Abonnentenliste. Feed-URLs koennen aber Filterparameter wie Teams oder Favoriten enthalten; Hoster-Logs koennen diese URL-Aufrufe sehen.
 
 ### Noch nicht entschieden
 

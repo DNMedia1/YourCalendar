@@ -54,6 +54,17 @@ damit Agenten nicht gegeneinander arbeiten.
 
 ## Handoff Log
 
+### 2026-05-28 18:39 Europe/Berlin - Codex - PR #46 Review
+- Ziel: Claude-PR #46 fuer Issue #15 pruefen und offensichtliche Datenschutz-Ungenauigkeit korrigieren.
+- GitHub-Bezug: PR #46, Issue #15.
+- Status: Korrektur in `docs/privacy-legal-baseline.md` vorbereitet.
+- Claim/Issue-Status: Issue #15 bleibt bei Claude Code; Codex agiert hier nur als Reviewer/Fix-Co-Autor.
+- Geaenderte Dateien: `docs/privacy-legal-baseline.md`, `docs/agent-status.md`.
+- Tests: Doku-Aenderung; `git diff --check` reicht vor Commit.
+- Neu gewonnenes Wissen: Browser-Favoriten bleiben zwar in `localStorage`, aktive Favoritenfilter werden aber als `favorites`-Query an `/api/events` und Feed-URLs uebertragen. Die App persistiert diese Werte nicht serverseitig.
+- Offene Risiken: Hoster-/CDN-Logs koennen Feed-URLs mit Filterparametern sehen; das muss in spaeterer Datenschutzerklaerung beruecksichtigt werden.
+- Naechster sinnvoller Schritt: PR #46 aktualisieren, Checks abwarten, dann #24 von sauberem `origin/main` starten.
+
 ### 2026-05-28 19:45 Europe/Berlin - Claude Code - docs/issue-15-privacy-legal
 - Ziel: Datenschutz-, Impressums- und Verantwortlichkeitsbedarf fuer den MVP dokumentieren (Issue #15).
 - GitHub-Bezug: Issue #15 (Datenschutz- und Impressumsbedarf klaeren), geclaimed per Kommentar.
