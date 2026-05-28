@@ -39,6 +39,7 @@ const elements = {
   sourcePlan: $("sourcePlan"),
   sourceMonitorStatus: $("sourceMonitorStatus"),
   sourceMonitor: $("sourceMonitor"),
+  categoryOverview: $("categoryOverview"),
   categoryTabs: $("categoryTabs"),
   calendarCatalog: $("calendarCatalog"),
   teamSearch: $("teamSearch"),
@@ -264,6 +265,7 @@ function renderCalendarDiscovery() {
   renderCoverageDetail();
   renderSourcePlan();
   renderSourceMonitor();
+  renderCategoryOverview();
   renderCategoryTabs();
   renderCalendarCatalog();
 }
@@ -421,6 +423,34 @@ function renderListItems(items = [], emptyText) {
   return itemsToRender.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
 }
 
+function renderCategoryOverview() {
+  if (!elements.categoryOverview) return;
+  if (!state.categories.length) {
+    elements.categoryOverview.innerHTML = `<div class="catalog-empty mini" role="status"><p>Noch keine Kategorien geladen.</p></div>`;
+    return;
+  }
+  elements.categoryOverview.innerHTML = state.categories.map((category) => {
+    const calendars = category.calendars || [];
+    const available = calendars.filter((calendar) => calendar.hasFeed).length;
+    const statusLabel = calendars.length ? `${available} von ${calendars.length} abonnierbar` : "Noch nicht befüllt";
+    return `
+      <button class="category-summary${category.id === state.selectedCategoryId ? " active" : ""}" type="button" data-category-id="${escapeAttribute(category.id)}" aria-pressed="${category.id === state.selectedCategoryId}">
+        <strong>${escapeHtml(category.name)}</strong>
+        <span>${escapeHtml(category.description)}</span>
+        <small>${escapeHtml(statusLabel)}</small>
+      </button>
+    `;
+  }).join("");
+  document.querySelectorAll(".category-summary").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedCategoryId = button.dataset.categoryId;
+      renderCategoryOverview();
+      renderCategoryTabs();
+      renderCalendarCatalog();
+    });
+  });
+}
+
 function renderCategoryTabs() {
   if (!elements.categoryTabs) return;
   if (!state.categories.length) {
@@ -488,10 +518,23 @@ function renderCalendarCatalog() {
         </div>
       </div>
       <ul class="quality-notes">${renderListItems(calendar.quality?.warnings, "Keine Warnhinweise erfasst.")}</ul>
+      <div class="calendar-subscribe-context" role="group" aria-label="Abo-Kontext">
+        ${calendar.hasFeed ? `
+          <strong>Abonnieren mit</strong>
+          <span>Apple Kalender</span>
+          <span>Google per URL</span>
+          <span>Outlook aus dem Internet</span>
+        ` : `
+          <strong>Vor Veröffentlichung</strong>
+          <span>Provider klären</span>
+          <span>Lizenz prüfen</span>
+          <span>Feed aktivieren</span>
+        `}
+      </div>
       <div class="calendar-actions">
         ${calendar.hasFeed ? `
-          <a class="button secondary" href="${escapeAttribute(calendar.feedUrl)}">ICS laden</a>
-          <button class="button primary copy-calendar" type="button" data-subscribe-url="${escapeAttribute(calendar.subscribeUrl)}">Abo-Link kopieren</button>
+          <a class="button secondary" href="${escapeAttribute(calendar.feedUrl)}" aria-label="${escapeAttribute(calendar.name)} als ICS laden">ICS laden</a>
+          <button class="button primary copy-calendar" type="button" data-subscribe-url="${escapeAttribute(calendar.subscribeUrl)}" aria-label="Abo-Link für ${escapeAttribute(calendar.name)} kopieren">Abo-Link kopieren</button>
         ` : `<span class="action-note">Noch kein abonnierbarer Feed.</span>`}
       </div>
     </article>

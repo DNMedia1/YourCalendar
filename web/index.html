@@ -16,12 +16,12 @@
           <div class="brand-mark">YC</div>
           <div>
             <h1>YourCalendar</h1>
-            <p>Deutscher Fußballkalender</p>
+            <p>Öffentliche Kalender entdecken</p>
           </div>
         </div>
 
         <section class="panel" aria-labelledby="dataModeLabel">
-          <span class="eyebrow" id="dataModeLabel">Datenmodus</span>
+          <span class="eyebrow" id="dataModeLabel">Feed-Vorschau</span>
           <div class="segmented" role="group" aria-label="Datenmodus">
             <button class="segment" id="liveMode" type="button" aria-pressed="false">Live</button>
             <button class="segment active" id="sampleMode" type="button" aria-pressed="true">Sample</button>
@@ -29,7 +29,7 @@
         </section>
 
         <section class="panel" aria-labelledby="leagueLabel">
-          <span class="eyebrow" id="leagueLabel">Ligen</span>
+          <span class="eyebrow" id="leagueLabel">Vorschau-Ligen</span>
           <label><input type="checkbox" class="league" value="bl1" checked /> <span>1. Bundesliga</span></label>
           <label><input type="checkbox" class="league" value="bl2" checked /> <span>2. Bundesliga</span></label>
           <label><input type="checkbox" class="league" value="bl3" checked /> <span>3. Liga</span></label>
@@ -70,7 +70,7 @@
         <header class="topbar">
           <div>
             <span class="eyebrow">Entdecken</span>
-            <h2>Kalender finden</h2>
+            <h2>Kalender entdecken</h2>
           </div>
           <div class="actions">
             <button class="theme-toggle" id="themeToggle" type="button" aria-pressed="false" aria-label="Dark Mode aktivieren">
@@ -89,10 +89,19 @@
           <div class="section-title compact">
             <div>
               <span class="eyebrow">Kategorien</span>
-              <h3 id="discoverTitle">Verfügbare Kalender</h3>
+              <h3 id="discoverTitle">Öffentlicher Kalenderkatalog</h3>
             </div>
             <span id="catalogStatus">Lädt</span>
           </div>
+          <div class="catalog-intro">
+            <p>Wähle eine Kategorie, prüfe Quelle und Aktualität und abonniere den passenden Kalender ohne Login.</p>
+            <div class="catalog-promises" role="group" aria-label="Katalogmerkmale">
+              <span>Quelle sichtbar</span>
+              <span>Sample/Live klar markiert</span>
+              <span>Apple, Google, Outlook</span>
+            </div>
+          </div>
+          <div class="category-overview" id="categoryOverview" role="group" aria-label="Kalenderkategorien"></div>
           <div class="quality-legend" id="qualityLegend"></div>
           <section class="coverage-panel" aria-labelledby="coverageTitle">
             <div class="coverage-head">
