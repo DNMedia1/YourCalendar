@@ -26,6 +26,19 @@ damit Agenten nicht gegeneinander arbeiten.
 
 ## Aktueller Intake-Snapshot
 
+### 2026-05-29 Europe/Berlin - Claude Code - Intake
+- Repo-Branch: `feat/issue-48-cypress-e2e` von sauberem `main` (`d1f8899`).
+- Worktree clean: yes vor Branch; danach neue Cypress-Dateien + aktualisierte `package-lock.json`.
+- GitHub PRs geprüft: PR #49 (Issue #25, offen, Review von eskar87), PR #37 (Issue #14, offen). Kein Datei-Konflikt.
+- Offene Issues geprüft: #14, #16-20, #22, #23, #25, #40-42, #48.
+- Gewähltes Issue: #48 [P2][Story] Cypress E2E Workflow in CI integrieren (vom User ausdrücklich bestätigt).
+- Warum dieses Issue: #14 und #25 hängen an Reviews, #23 ist zugewiesen, #22 hat einen fremden Remote-Branch (Kollisionsrisiko). #48 ist frisch, ohne Branch/PR und kollisionsfrei.
+- Claim-Status: GitHub-Kommentar fehlgeschlagen (403, Token ohne Issue-Schreibrecht). Claim daher hier dokumentiert; GitHub-Issue #48 nicht automatisch aktualisiert.
+- Branch: `feat/issue-48-cypress-e2e`
+- Erwartete Dateien: `package.json`, `package-lock.json`, `.gitignore`, `.github/workflows/frontend.yml`, `cypress.config.mjs`, `cypress/support/e2e.js`, `cypress/e2e/catalog.cy.js`, `docs/agent-status.md`.
+- Erste Checks: `node --check` für Spec/Config, lokaler `npx cypress run` (4/4 grün), `npm test` (7/7), `python3 -m unittest` (46 OK).
+- Blocker/Unsicherheit: Issue-Claim ohne Schreibrecht nicht möglich; der echte Browserlauf wird erst als PR-Check auf GitHub grün sichtbar.
+
 ### 2026-05-28 18:48 Europe/Berlin - Codex - Intake
 - Repo-Branch: `feat/issue-24-calendar-discovery` auf aktuellem `main` (`d1f8899`).
 - Worktree clean: nein, nur tracked `__pycache__`-Dateien sind lokal geaendert und werden nicht staged.
@@ -66,6 +79,17 @@ damit Agenten nicht gegeneinander arbeiten.
 - Blocker/Unsicherheit: Kein gesondertes GitHub-Label-Schema vorhanden; Auswahlregel nutzt daher Titel-Prioritaeten wie `[P0]`, `[P1]`, `[P2]`.
 
 ## Handoff Log
+
+### 2026-05-29 Europe/Berlin - Claude Code - feat/issue-48-cypress-e2e
+- Ziel: Cypress-E2E-Smoke-Test für den öffentlichen Kalenderkatalog plus GitHub-Actions-Job (Issue #48).
+- GitHub-Bezug: Issue #48. Claim-Kommentar scheiterte mit 403, daher hier dokumentiert.
+- Status: Umsetzung lokal fertig, 4/4 Cypress-Tests grün; bereit für Commit, Push und PR.
+- Claim/Issue-Status: Issue #48 liegt bei Claude Code auf Branch `feat/issue-48-cypress-e2e`.
+- Geänderte Dateien: `package.json`, `package-lock.json`, `.gitignore`, `.github/workflows/frontend.yml`, `cypress.config.mjs`, `cypress/support/e2e.js`, `cypress/e2e/catalog.cy.js`, `docs/agent-status.md`.
+- Tests: `node --check`; `npx cypress run` (4/4 grün, Electron 37); `npm test` (7/7); `python3 -m unittest discover -s tests` (46 OK).
+- Neu gewonnenes Wissen: Ein Klick auf `.category-tab` aktualisiert nur Tabs und Katalog, nicht die `aria-pressed`-States der Übersicht; eine echte Kategorie-Auswahl im Test läuft daher über `.category-summary`. `#copyFeedButton` ist während des Ladens `disabled`. `/api/calendars` liefert 6 Kategorien; `sports` enthält `football-germany`/`sample-ksc` mit `.ics`-Feeds.
+- Offene Risiken: Der CI-Job lädt das Cypress-Binary (über `npm ci` + Postinstall); Laufzeit und Netz im Actions-Runner beachten. Der Browserlauf gilt erst als grün, wenn der PR-Check erfolgreich ist.
+- Nächster sinnvoller Schritt: Conventional Commit, Branch pushen (origin, sonst Alias `git@github-dnmedia1:`), PR `ci: add Cypress e2e smoke test workflow (refs #48)` erstellen, Checks prüfen.
 
 ### 2026-05-28 20:39 Europe/Berlin - Codex - feat/issue-24-calendar-discovery
 - Ziel: Oeffentliche Website-Struktur fuer Kalenderentdeckung als Katalog verbessern (Issue #24).

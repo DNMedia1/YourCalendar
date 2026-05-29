@@ -14,6 +14,9 @@ sources.json
 node_modules/
 .storybook-home/
 storybook-static/
+cypress/videos/
+cypress/screenshots/
+cypress/downloads/
 settings.json
 .claude/
 .claude/settings.local.json

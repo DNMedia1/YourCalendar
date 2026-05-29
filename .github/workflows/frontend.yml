@@ -48,3 +48,45 @@ jobs:
           curl -fsS "http://127.0.0.1:8765/api/events?sample=true&leagues=bl1,bl2,bl3&includePast=true" | grep '"ok": true'
           curl -fsS "http://127.0.0.1:8765/feeds/current.ics?sample=true&leagues=bl1,bl2,bl3&includePast=true" | grep 'BEGIN:VCALENDAR'
           curl -fsSI "http://127.0.0.1:8765/feeds/sample-ksc.ics" | grep 'text/calendar'
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: npm ci
+      - name: Build CSS assets
+        run: npm run build:css
+      - name: Start local web server
+        run: |
+          python3 -B web_app.py > /tmp/yourcalendar-e2e.log 2>&1 &
+          echo "WEB_PID=$!" >> "$GITHUB_ENV"
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:8765/ >/dev/null; then
+              echo "Local web server is up."
+              break
+            fi
+            sleep 1
+          done
+      - name: Run Cypress smoke tests (headless)
+        run: npx cypress run
+      - name: Stop local web server
+        if: always()
+        run: '[ -n "${WEB_PID:-}" ] && kill "$WEB_PID" || true'
+      - name: Upload Cypress artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-artifacts
+          path: |
+            cypress/screenshots
+            cypress/videos
+            /tmp/yourcalendar-e2e.log
+          if-no-files-found: ignore
+          retention-days: 7
