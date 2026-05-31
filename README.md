@@ -17,6 +17,10 @@ opened/imported.
 ICS is the simplest common denominator for a POC because all three target
 calendar ecosystems can consume it.
 
+The deliberate scope decision to stay ICS-first for the MVP, and to defer direct
+Google/Outlook OAuth integrations to later spikes, is documented in
+`docs/calendar-integration-scope.md` (refs #14).
+
 ## Run
 
 ```bash
