@@ -26,6 +26,7 @@ damit Agenten nicht gegeneinander arbeiten.
 
 ## Aktueller Intake-Snapshot
 
+<<<<<<< HEAD
 ### 2026-05-29 Europe/Berlin - Claude Code - Intake
 - Repo-Branch: `feat/issue-48-cypress-e2e` von sauberem `main` (`d1f8899`).
 - Worktree clean: yes vor Branch; danach neue Cypress-Dateien + aktualisierte `package-lock.json`.
@@ -38,7 +39,7 @@ damit Agenten nicht gegeneinander arbeiten.
 - Erwartete Dateien: `package.json`, `package-lock.json`, `.gitignore`, `.github/workflows/frontend.yml`, `cypress.config.mjs`, `cypress/support/e2e.js`, `cypress/e2e/catalog.cy.js`, `docs/agent-status.md`.
 - Erste Checks: `node --check` für Spec/Config, lokaler `npx cypress run` (4/4 grün), `npm test` (7/7), `python3 -m unittest` (46 OK).
 - Blocker/Unsicherheit: Issue-Claim ohne Schreibrecht nicht möglich; der echte Browserlauf wird erst als PR-Check auf GitHub grün sichtbar.
-
+=======
 ### 2026-05-28 21:47 Europe/Berlin - Codex - Intake
 - Repo-Branch: `feat/issue-25-mobile-first-polish` auf aktuellem `main` (`e14eee0`).
 - Worktree clean: nein, nur tracked `__pycache__`-Dateien waren vor Start lokal geaendert und werden nicht staged.
@@ -52,6 +53,7 @@ damit Agenten nicht gegeneinander arbeiten.
 - Erste Checks: `git status --short --branch`, offene GitHub PRs/Issues, Issue #25 gelesen.
 - Blocker/Unsicherheit: PR soll nicht gemergt werden, sondern offen fuer Review von `eskar87` bleiben.
 - Zusatz: Cypress-Follow-up als Issue #48 angelegt.
+>>>>>>> feat/issue-25-mobile-first-polish
 
 ### 2026-05-28 18:48 Europe/Berlin - Codex - Intake
 - Repo-Branch: `feat/issue-24-calendar-discovery` auf aktuellem `main` (`d1f8899`).
@@ -94,6 +96,7 @@ damit Agenten nicht gegeneinander arbeiten.
 
 ## Handoff Log
 
+<<<<<<< HEAD
 ### 2026-05-29 Europe/Berlin - Claude Code - feat/issue-48-cypress-e2e
 - Ziel: Cypress-E2E-Smoke-Test für den öffentlichen Kalenderkatalog plus GitHub-Actions-Job (Issue #48).
 - GitHub-Bezug: Issue #48. Claim-Kommentar scheiterte mit 403, daher hier dokumentiert.
@@ -104,6 +107,7 @@ damit Agenten nicht gegeneinander arbeiten.
 - Neu gewonnenes Wissen: Ein Klick auf `.category-tab` aktualisiert nur Tabs und Katalog, nicht die `aria-pressed`-States der Übersicht; eine echte Kategorie-Auswahl im Test läuft daher über `.category-summary`. `#copyFeedButton` ist während des Ladens `disabled`. `/api/calendars` liefert 6 Kategorien; `sports` enthält `football-germany`/`sample-ksc` mit `.ics`-Feeds.
 - Offene Risiken: Der CI-Job lädt das Cypress-Binary (über `npm ci` + Postinstall); Laufzeit und Netz im Actions-Runner beachten. Der Browserlauf gilt erst als grün, wenn der PR-Check erfolgreich ist.
 - Nächster sinnvoller Schritt: Conventional Commit, Branch pushen (origin, sonst Alias `git@github-dnmedia1:`), PR `ci: add Cypress e2e smoke test workflow (refs #48)` erstellen, Checks prüfen.
+=======
 ### 2026-05-28 21:53 Europe/Berlin - Codex - feat/issue-25-mobile-first-polish
 - Ziel: Mobile-first Website-Polish fuer Issue #25 umsetzen, ohne automatisch zu mergen.
 - GitHub-Bezug: Issue #25; Cypress-Follow-up Issue #48; geplanter PR mit Review-Request an `eskar87`.
@@ -115,6 +119,7 @@ damit Agenten nicht gegeneinander arbeiten.
 - Neu gewonnenes Wissen: Browser-Cache auf `127.0.0.1` kann alte CSS-Dateien halten; fuer QA wurde `localhost` als frische Origin genutzt. Die App selbst ist mit den aktuellen CSS-Dateien korrekt.
 - Offene Risiken: Echte Safari-/Android-Chrome-Geraete sind noch nicht manuell getestet; Cypress-Workflow ist als Issue #48 geplant, aber noch nicht implementiert.
 - Naechster sinnvoller Schritt: PR offen lassen, `eskar87` Review abwarten, danach ggf. Feedback einarbeiten.
+>>>>>>> feat/issue-25-mobile-first-polish
 
 ### 2026-05-28 20:39 Europe/Berlin - Codex - feat/issue-24-calendar-discovery
 - Ziel: Oeffentliche Website-Struktur fuer Kalenderentdeckung als Katalog verbessern (Issue #24).

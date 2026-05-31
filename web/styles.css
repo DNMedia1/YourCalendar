@@ -31,6 +31,26 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
   border: 0;
 }
 
+.skip-link {
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  z-index: 20;
+  min-height: var(--touch-target);
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--panel);
+  font-weight: 850;
+  text-decoration: none;
+  transform: translateY(-140%);
+  transition: transform var(--motion-fast);
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: 330px minmax(0, 1fr);
@@ -297,6 +317,7 @@ h3 { font-size: 18px; }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 24px;
   margin-bottom: 22px;
 }
@@ -307,6 +328,31 @@ h3 { font-size: 18px; }
   justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.quick-nav {
+  display: flex;
+  flex: 1 0 100%;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.quick-nav a {
+  min-height: 36px;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 86%, var(--bg));
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.quick-nav a:hover,
+.quick-nav a:focus-visible {
+  border-color: color-mix(in srgb, var(--primary) 52%, var(--line));
+  color: var(--primary-strong);
 }
 
 .button, .icon-button {

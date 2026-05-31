@@ -1,9 +1,57 @@
-/* Mobile-first overrides for YourCalendar */
+/* Responsive polish for tablet and phone breakpoints. */
 
-/* Increase tap targets */
-button, .segment, .icon-button, .button, input[type="checkbox"] {
-  min-height: 48px;
-  font-size: 1rem;
+button,
+.segment,
+.icon-button,
+.button,
+.mini-button,
+.theme-toggle,
+input[type="checkbox"] {
+  min-height: var(--touch-target);
+}
+
+.button,
+.segment,
+.theme-toggle,
+.feed-url,
+.calendar-card,
+.category-summary,
+.source-candidate-card {
+  min-width: 0;
+}
+
+.button,
+.segment,
+.theme-toggle,
+.calendar-actions,
+.subscribe-notes span,
+.source-row strong {
+  overflow-wrap: anywhere;
+}
+
+#discoverTitle,
+#subscriptionTitle,
+#previewFilters {
+  scroll-margin-top: 18px;
+}
+
+@media (max-width: 1100px) {
+  .app-shell {
+    max-width: none;
+    margin: 0;
+  }
+
+  .sidebar {
+    padding: 18px;
+  }
+
+  .content {
+    padding: 24px;
+  }
+
+  .source-monitor-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 900px) {
@@ -11,23 +59,46 @@ button, .segment, .icon-button, .button, input[type="checkbox"] {
     background: var(--bg);
   }
 
-  .content {
-    padding: 20px;
+  .sidebar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    padding: 18px;
+  }
+
+  .brand,
+  .monitoring-panel {
+    grid-column: 1 / -1;
+  }
+
+  .topbar {
+    gap: 14px;
   }
 
   .actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
   }
 
   .actions .button,
-  .actions .theme-toggle {
+  .actions .theme-toggle,
+  .actions .icon-button {
     width: 100%;
   }
 
-  .actions .icon-button {
+  .quick-nav {
+    justify-content: flex-start;
     width: 100%;
+  }
+
+  .category-summary {
+    min-height: 128px;
+  }
+
+  .calendar-actions .button,
+  .calendar-actions .copy-calendar {
+    flex: 1 1 180px;
   }
 
   .event-actions {
@@ -36,130 +107,89 @@ button, .segment, .icon-button, .button, input[type="checkbox"] {
   }
 }
 
-/* Adjust sidebar spacing on very small screens */
-
-@media (max-width: 600px) {
+@media (max-width: 640px) {
   .app-shell {
     border-left: 0;
     border-right: 0;
   }
+
   .sidebar {
+    grid-template-columns: 1fr;
     padding: 12px;
-    gap: 12px;
   }
+
+  .brand {
+    align-items: flex-start;
+  }
+
   .brand h1 {
-    font-size: 1.5rem;
+    font-size: 1.35rem;
   }
+
   .brand p {
-    font-size: 0.9rem;
+    font-size: 0.92rem;
   }
+
   .content {
     padding: 16px 12px 24px;
   }
+
   .topbar {
-    gap: 16px;
+    margin-bottom: 16px;
   }
+
   h2 {
     font-size: 2rem;
   }
-  .actions {
-    grid-template-columns: 1fr;
+
+  .quick-nav {
+    overflow-x: auto;
+    padding-bottom: 2px;
   }
+
+  .quick-nav a {
+    flex: 0 0 auto;
+  }
+
+  .catalog-intro,
+  .coverage-panel,
+  .source-plan-panel,
+  .source-monitor-panel,
+  .subscription-area,
+  .source-candidates-area {
+    padding: 14px 12px;
+  }
+
+  .category-overview,
+  .calendar-catalog,
+  .quality-legend,
+  .category-tabs {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .category-summary {
+    min-height: auto;
+  }
+
+  .calendar-card,
+  .catalog-empty,
+  .source-plan-card,
+  .source-monitor-card,
+  .source-candidate-card,
   .event-card {
-    min-height: 0;
-    padding: 16px;
-  }
-  .date-block {
-    grid-template-columns: 1fr auto;
-    align-items: baseline;
-  }
-  .event-main strong {
-    font-size: 1rem;
-  }
-  .event-meta {
-    font-size: .9rem;
-  }
-  .tag {
-    min-width: 52px;
-    text-align: center;
+    padding: 14px;
   }
 
-  /* Subscription area tweaks for mobile */
-
-/* Dark‑Mode overrides for subscription area */
-[data-theme="dark"] .subscription-area {
-  background: var(--surface);
-  color: var(--muted);
-}
-[data-theme="dark"] .subscription-row .input {
-  background: var(--panel);
-  color: var(--ink);
-  border-color: var(--line);
-}
-[data-theme="dark"] .subscribe-notes span {
-  background: var(--panel);
-  color: var(--ink);
-  border-color: var(--line);
-}
-  .subscription-area {
-    padding: 12px;
-  }
+  .calendar-actions,
   .subscription-row {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .subscription-row .input {
-    width: 100%;
-  }
-  .subscription-row .button {
-    width: 100%;
-  }
-  .subscribe-notes {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    font-size: 0.9rem;
-  }
-}
-@media (max-width: 600px) {
-  .app-shell {
-    border-left: 0;
-    border-right: 0;
-  }
-
-  .sidebar {
-    padding: 12px;
-    gap: 12px;
-  }
-
-  .brand h1 {
-    font-size: 1.5rem;
-  }
-
-  .brand p {
-    font-size: 0.9rem;
-  }
-
-  .content {
-    padding: 16px 12px 24px;
-  }
-
-  .topbar {
-    gap: 16px;
-  }
-
-  h2 {
-    font-size: 2rem;
-  }
-
-  .actions {
+    display: grid;
     grid-template-columns: 1fr;
   }
 
-  .event-card {
-    min-height: 0;
-    padding: 16px;
+  .subscribe-notes {
+    display: grid;
+    gap: 6px;
   }
 
   .date-block {
@@ -178,5 +208,22 @@ button, .segment, .icon-button, .button, input[type="checkbox"] {
   .tag {
     min-width: 52px;
     text-align: center;
+  }
+}
+
+@media (max-width: 420px) {
+  .actions {
+    grid-template-columns: 1fr;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+  }
+
+  .section-title,
+  .coverage-head,
+  .source-plan-head,
+  .source-monitor-head {
+    gap: 10px;
   }
 }
