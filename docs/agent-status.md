@@ -38,6 +38,18 @@ damit Agenten nicht gegeneinander arbeiten.
 - Erwartete Dateien: `package.json`, `package-lock.json`, `.gitignore`, `.github/workflows/frontend.yml`, `cypress.config.mjs`, `cypress/support/e2e.js`, `cypress/e2e/catalog.cy.js`, `docs/agent-status.md`.
 - Erste Checks: `node --check` für Spec/Config, lokaler `npx cypress run` (4/4 grün), `npm test` (7/7), `python3 -m unittest` (46 OK).
 - Blocker/Unsicherheit: Issue-Claim ohne Schreibrecht nicht möglich; der echte Browserlauf wird erst als PR-Check auf GitHub grün sichtbar.
+### 2026-06-01 01:10 Europe/Berlin - Codex - Intake
+- Repo-Branch: `MasterMainReview`, dann `codex/repo-clean-code-guide` erstellt.
+- Worktree clean: yes vor den Aenderungen.
+- GitHub PRs geprueft: nicht moeglich; `gh` ist lokal nicht installiert und kein belastbarer GitHub-Toolzugriff war verfuegbar.
+- Offene Issues geprueft: nicht moeglich aus demselben Grund.
+- Gewaehltes Issue: none.
+- Warum dieses Issue: Der User gab einen direkten Repo-weiten Wartungsauftrag ohne konkrete Issue-Nummer.
+- Claim-Status: Kein GitHub-Claim moeglich; lokaler Intake und Handoff werden hier dokumentiert.
+- Branch: `codex/repo-clean-code-guide`
+- Erwartete Dateien: `import_jobs.py`, `web_app.py`, `tests/test_web_feeds.py`, `web/styles.css`, `package.json`, `package-lock.json`, `README.md`, `docs/coding-guide.md`, `docs/agent-status.md`.
+- Erste Checks: `git status --short --branch`, lokale Agenten-Doku, Python- und npm-Testlaeufe.
+- Blocker/Unsicherheit: GitHub-Planungsstand konnte nicht verifiziert werden; Storybook braucht in dieser Sandbox fuer Cache-Schreibzugriff erhoehte Ausfuehrung.
 
 ### 2026-05-28 21:47 Europe/Berlin - Codex - Intake
 - Repo-Branch: `feat/issue-25-mobile-first-polish` auf aktuellem `main` (`e14eee0`).
@@ -94,6 +106,17 @@ damit Agenten nicht gegeneinander arbeiten.
 
 ## Handoff Log
 
+### 2026-06-01 01:53 Europe/Berlin - Codex - codex/repo-clean-code-guide
+- Ziel: Nach Rebase erneut auf Clean-Code-/Repo-Hygiene-Probleme pruefen und konkrete Rebase-Artefakte korrigieren.
+- GitHub-Bezug: Kein neuer Issue-Claim; Fortsetzung des lokalen Branches `codex/repo-clean-code-guide`.
+- Status: Lokale Korrekturen fertig; relevante Checks gruen.
+- Claim/Issue-Status: Unveraendert, kein GitHub-Claim aus dieser lokalen Nacharbeit.
+- Geaenderte Dateien: `package.json`, `web/styles.css`, `docs/coding-guide.md`, entfernte `.orig`-Artefakte.
+- Tests: `python -B -m unittest discover -s tests -p test_*.py` gruen, 47 Tests; `npm test` gruen, 8 Tests; `npm ci --dry-run` gruen; `npm run build-storybook` gruen; `git diff --check` gruen.
+- Neu gewonnenes Wissen: Der Rebase hatte ein fehlendes Komma in `package.json`, drei `.orig`-Mergeartefakte und ein wieder ueberschrittenes CSS-Performance-Budget hinterlassen.
+- Offene Risiken: Branch ist laut `git status` noch `ahead 9, behind 1` gegen `Master/codex/repo-clean-code-guide`; das sollte vor Push/PR bewusst synchronisiert werden.
+- Naechster sinnvoller Schritt: Korrekturen reviewen, ggf. amend/committen und dann Remote-Branch sauber aktualisieren.
+
 ### 2026-05-29 Europe/Berlin - Claude Code - feat/issue-48-cypress-e2e
 - Ziel: Cypress-E2E-Smoke-Test für den öffentlichen Kalenderkatalog plus GitHub-Actions-Job (Issue #48).
 - GitHub-Bezug: Issue #48. Claim-Kommentar scheiterte mit 403, daher hier dokumentiert.
@@ -104,6 +127,16 @@ damit Agenten nicht gegeneinander arbeiten.
 - Neu gewonnenes Wissen: Ein Klick auf `.category-tab` aktualisiert nur Tabs und Katalog, nicht die `aria-pressed`-States der Übersicht; eine echte Kategorie-Auswahl im Test läuft daher über `.category-summary`. `#copyFeedButton` ist während des Ladens `disabled`. `/api/calendars` liefert 6 Kategorien; `sports` enthält `football-germany`/`sample-ksc` mit `.ics`-Feeds.
 - Offene Risiken: Der CI-Job lädt das Cypress-Binary (über `npm ci` + Postinstall); Laufzeit und Netz im Actions-Runner beachten. Der Browserlauf gilt erst als grün, wenn der PR-Check erfolgreich ist.
 - Nächster sinnvoller Schritt: Conventional Commit, Branch pushen (origin, sonst Alias `git@github-dnmedia1:`), PR `ci: add Cypress e2e smoke test workflow (refs #48)` erstellen, Checks prüfen.
+### 2026-06-01 01:15 Europe/Berlin - Codex - codex/repo-clean-code-guide
+- Ziel: Repository pruefen, konkrete Clean-Code-/Portabilitaetsfehler korrigieren und eine Coding-Guide-Doku ergaenzen.
+- GitHub-Bezug: Kein Issue-Claim moeglich; `gh` fehlt lokal.
+- Status: Lokale Umsetzung fertig, Tests gruen.
+- Claim/Issue-Status: Kein GitHub-Claim; dieser Handoff dokumentiert den lokalen Scope.
+- Geaenderte Dateien: `import_jobs.py`, `web_app.py`, `tests/test_web_feeds.py`, `web/styles.css`, `package.json`, `package-lock.json`, `README.md`, `docs/coding-guide.md`, `docs/agent-status.md`.
+- Tests: `python -X pycache_prefix=yourcalendar-the-goal-is-to-have\__pycache__ -m py_compile ...` gruen; `python -B -m unittest discover -s tests -p test_*.py` gruen, 47 Tests; `npm test` gruen, 7 Tests; `npm run build-storybook` gruen mit erhoehter Ausfuehrung.
+- Neu gewonnenes Wissen: Windows-Newline-Translation konnte ICS-Cache-Dateien von `\r\n` auf `\r\r\n` verdoppeln; `package-lock.json` war nicht synchron mit `package.json`; Storybook-Skripte brauchten plattformneutrale Env-Variablen.
+- Offene Risiken: GitHub-Issues/PRs wurden nicht live geprueft; Browserslist meldet veraltete `caniuse-lite`-Daten, ohne den Test zu blockieren.
+- Naechster sinnvoller Schritt: Aenderungen reviewen, committen und bei GitHub-Zugriff PR erstellen.
 ### 2026-05-28 21:53 Europe/Berlin - Codex - feat/issue-25-mobile-first-polish
 - Ziel: Mobile-first Website-Polish fuer Issue #25 umsetzen, ohne automatisch zu mergen.
 - GitHub-Bezug: Issue #25; Cypress-Follow-up Issue #48; geplanter PR mit Review-Request an `eskar87`.

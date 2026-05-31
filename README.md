@@ -111,6 +111,9 @@ can be started manually and also runs on a six-hour schedule. It uploads feed,
 run-log, snapshot and change-report artifacts without committing generated
 runtime files back into Git.
 
+Project-level implementation rules and review expectations are documented in
+`docs/coding-guide.md`.
+
 In production, set `YOURCALENDAR_PUBLIC_BASE_URL` to the deployed HTTPS origin
 so the UI exposes subscription URLs such as:
 

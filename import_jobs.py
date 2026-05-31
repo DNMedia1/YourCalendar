@@ -9,7 +9,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
-from event_changes import compare_snapshots, load_snapshot, save_changes, save_snapshot, snapshot_from_ics, summarize_changes
+from event_changes import (
+    compare_snapshots,
+    load_snapshot,
+    save_changes,
+    save_snapshot,
+    snapshot_from_ics,
+    summarize_changes,
+)
 from web_app import PUBLISHED_CALENDARS, feed_filename, render_feed
 
 
@@ -24,6 +31,10 @@ RenderFeed = Callable[[str], tuple[str, bool]]
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def write_text_preserving_newlines(path: Path, content: str) -> None:
+    path.write_text(content, encoding="utf-8", newline="")
 
 
 def feed_cache_path(feed_id: str) -> Path:
@@ -62,7 +73,7 @@ def write_feed_cache(feed_id: str, content: str) -> Path:
     target = feed_cache_path(feed_id)
     fd, temp_name = tempfile.mkstemp(prefix=f"{target.name}.", suffix=".tmp", dir=FEED_CACHE_DIR)
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
             handle.write(content)
         Path(temp_name).replace(target)
     except Exception:
@@ -83,7 +94,10 @@ def load_import_runs() -> list[dict]:
 
 def save_import_runs(runs: list[dict]) -> None:
     IMPORT_RUNS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    IMPORT_RUNS_PATH.write_text(json.dumps(runs, ensure_ascii=False, indent=2) + "\n")
+    write_text_preserving_newlines(
+        IMPORT_RUNS_PATH,
+        json.dumps(runs, ensure_ascii=False, indent=2) + "\n",
+    )
 
 
 def append_import_runs(results: list[dict]) -> None:

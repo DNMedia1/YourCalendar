@@ -427,6 +427,10 @@ def cached_feed_path(feed_id: str) -> Path:
     return FEED_CACHE_DIR / feed_filename(feed_id)
 
 
+def normalize_ics_newlines(content: str) -> str:
+    return content.replace("\r\r\n", "\r\n")
+
+
 def load_cached_feed(feed_id: str, query: str = "") -> str | None:
     if query or feed_id not in PUBLISHED_CALENDARS:
         return None
@@ -434,7 +438,7 @@ def load_cached_feed(feed_id: str, query: str = "") -> str | None:
     if not path.exists():
         return None
     with path.open(encoding="utf-8", newline="") as handle:
-        return handle.read()
+        return normalize_ics_newlines(handle.read())
 
 
 def resolve_feed(feed_id: str, query: str) -> tuple[str, dict[str, list[str]], bool]:
