@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="/mobile.css" />
   </head>
   <body>
+    <a class="skip-link" href="#discoverTitle">Zum Kalenderkatalog springen</a>
     <main class="app-shell">
       <aside class="sidebar">
         <div class="brand">
@@ -20,7 +21,7 @@
           </div>
         </div>
 
-        <section class="panel" aria-labelledby="dataModeLabel">
+        <section class="panel" id="previewFilters" aria-labelledby="dataModeLabel">
           <span class="eyebrow" id="dataModeLabel">Feed-Vorschau</span>
           <div class="segmented" role="group" aria-label="Datenmodus">
             <button class="segment" id="liveMode" type="button" aria-pressed="false">Live</button>
@@ -83,6 +84,11 @@
             <a class="button secondary" id="downloadLink" href="/feeds/current.ics?sample=true&leagues=bl1%2Cbl2%2Cbl3&includePast=true">ICS laden</a>
             <button class="button primary" id="appleButton" type="button">Apple Kalender öffnen</button>
           </div>
+          <nav class="quick-nav" aria-label="Schnellnavigation">
+            <a href="#discoverTitle">Katalog</a>
+            <a href="#subscriptionTitle">Abo</a>
+            <a href="#previewFilters">Filter</a>
+          </nav>
         </header>
 
         <section class="discover-area" aria-labelledby="discoverTitle">
@@ -147,7 +153,7 @@
         <section class="subscription-area">
           <div>
             <span class="eyebrow">Kalenderabo</span>
-            <h3>Aktueller Feed</h3>
+            <h3 id="subscriptionTitle">Aktueller Feed</h3>
           </div>
           <div class="subscription-row">
             <input class="input feed-url" id="feedUrl" type="url" readonly value="" aria-label="ICS Feed URL" />
