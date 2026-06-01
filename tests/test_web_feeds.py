@@ -15,6 +15,7 @@ from web_app import (
     feed_filename,
     feed_path_for_params,
     load_cached_feed,
+    normalize_ics_newlines,
     normalize_feed_params,
     render_feed,
     resolve_feed,
@@ -238,6 +239,12 @@ class CachedFeedTest(unittest.TestCase):
         cache_path.write_text("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n", encoding="utf-8")
 
         self.assertEqual(load_cached_feed("sample-ksc"), "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n")
+
+    def test_cached_feed_normalizes_windows_double_crlf(self) -> None:
+        self.assertEqual(
+            normalize_ics_newlines("BEGIN:VCALENDAR\r\r\nEND:VCALENDAR\r\r\n"),
+            "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n",
+        )
 
     def test_current_feed_and_filtered_feeds_do_not_use_cache(self) -> None:
         self.assertIsNone(load_cached_feed(CURRENT_FEED_ID))
