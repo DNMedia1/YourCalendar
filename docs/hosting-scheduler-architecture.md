@@ -50,6 +50,8 @@ Der erste betreibbare Scheduler kann als GitHub Actions Workflow laufen:
   (`0 1 * * *`, GitHub Actions cron läuft in UTC)
 - Import über `python3 -B import_jobs.py`
 - Feed-Cache und Logs als Artefakte
+- `output/sport-feeds.json` als Katalogmanifest fuer Sportgruppen,
+  Untergruppen und automatisch erzeugte Team-/Competition-Feeds
 - Kein Commit von generierten Feeds zurück ins Repository
 - `FOOTBALL_DATA_API_KEY` als Secret für football-data.org Bundesliga-Teamfeeds
 

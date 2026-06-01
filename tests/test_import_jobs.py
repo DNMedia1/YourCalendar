@@ -27,17 +27,20 @@ class ImportJobTests(unittest.TestCase):
         self.previous_runs_path = import_jobs.IMPORT_RUNS_PATH
         self.previous_snapshot_dir = import_jobs.EVENT_SNAPSHOT_DIR
         self.previous_changes_dir = import_jobs.EVENT_CHANGES_DIR
+        self.previous_sport_manifest_path = import_jobs.SPORT_FEED_MANIFEST_PATH
         temp_root = Path(self.tmpdir.name)
         import_jobs.FEED_CACHE_DIR = temp_root / "feeds"
         import_jobs.IMPORT_RUNS_PATH = temp_root / "import-runs.json"
         import_jobs.EVENT_SNAPSHOT_DIR = temp_root / "event-snapshots"
         import_jobs.EVENT_CHANGES_DIR = temp_root / "event-changes"
+        import_jobs.SPORT_FEED_MANIFEST_PATH = temp_root / "sport-feeds.json"
 
     def tearDown(self) -> None:
         import_jobs.FEED_CACHE_DIR = self.previous_cache_dir
         import_jobs.IMPORT_RUNS_PATH = self.previous_runs_path
         import_jobs.EVENT_SNAPSHOT_DIR = self.previous_snapshot_dir
         import_jobs.EVENT_CHANGES_DIR = self.previous_changes_dir
+        import_jobs.SPORT_FEED_MANIFEST_PATH = self.previous_sport_manifest_path
         self.tmpdir.cleanup()
 
     def test_import_calendar_writes_cache_and_success_result(self) -> None:

@@ -16,16 +16,18 @@
         <a class="button secondary" href="/">Zurueck</a>
         <div>
           <span class="eyebrow">Sport</span>
-          <h1>Bundesliga-Kalender</h1>
+          <h1>Sportkalender</h1>
         </div>
         <span id="sportCalendarCount">Laedt</span>
       </header>
 
       <section class="sport-feed-note" aria-live="polite">
-        <strong>Erste Bundesliga</strong>
-        <p>Die Teamkalender werden vom taeglichen Serverless-Import aus football-data.org erzeugt und als ICS-Feeds ausgeliefert.</p>
+        <strong>Automatisierte ICS-Feeds</strong>
+        <p>Teamkalender werden aus Provider-Teams erzeugt. Competition-Kalender werden fuer Sportarten ohne stabile Teamstruktur genutzt.</p>
       </section>
 
+      <nav class="sport-taxonomy" id="sportTaxonomy" aria-label="Sportgruppen"></nav>
+      <nav class="sport-subgroups" id="sportSubgroups" aria-label="Sportuntergruppen"></nav>
       <section class="sport-calendar-grid" id="sportCalendarGrid" aria-live="polite"></section>
     </main>
     <script src="/sport.js"></script>

@@ -42,6 +42,50 @@
 
 .sport-feed-note p { color: var(--muted); }
 
+.sport-taxonomy,
+.sport-subgroups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sport-nav-chip,
+.sport-subgroup-chip {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  text-decoration: none;
+  box-shadow: var(--shadow);
+}
+
+.sport-nav-chip {
+  display: grid;
+  gap: 5px;
+  flex: 1 1 210px;
+  min-height: 96px;
+  padding: 14px;
+}
+
+.sport-nav-chip span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.sport-subgroup-chip {
+  min-height: 38px;
+  padding: 9px 12px;
+  font-weight: 850;
+}
+
+.sport-nav-chip.active,
+.sport-subgroup-chip.active {
+  border-color: var(--primary);
+  color: var(--primary-strong);
+  box-shadow: var(--shadow-lift);
+}
+
 .sport-calendar-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -51,6 +95,14 @@
 .sport-team-card h2 {
   font-size: 20px;
   line-height: 1.18;
+}
+
+.sport-calendar-grid .catalog-empty ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
 }
 
 @media (max-width: 900px) {

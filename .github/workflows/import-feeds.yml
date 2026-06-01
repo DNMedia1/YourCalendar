@@ -17,10 +17,12 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile import modules
-        run: python3 -B -m py_compile import_jobs.py event_changes.py football_data_org.py web_app.py yourcalendar_poc.py
+        run: python3 -B -m py_compile import_jobs.py event_changes.py football_data_org.py sport_feed_importers.py sport_feed_registry.py web_app.py yourcalendar_poc.py
       - name: Run import job
         env:
           FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
+          THESPORTSDB_API_KEY: ${{ secrets.THESPORTSDB_API_KEY }}
+          PANDASCORE_API_KEY: ${{ secrets.PANDASCORE_API_KEY }}
         run: python3 -B import_jobs.py
       - name: Upload import artifacts
         if: always()
@@ -31,6 +33,7 @@ jobs:
             output/feeds/
             output/import-runs.json
             output/football-data-bl1-teams.json
+            output/sport-feeds.json
             output/event-snapshots/
             output/event-changes/
           if-no-files-found: warn

@@ -20,6 +20,7 @@ from football_data_org import (
     FOOTBALL_DATA_PROVIDER_LABEL,
     fetch_football_data_team_events,
 )
+from sport_feed_registry import SPORT_FEED_MANIFEST_FILENAME, sport_taxonomy_payload
 from yourcalendar_poc import (
     DEFAULT_OUTPUT,
     DEFAULT_TIMEZONE,
@@ -45,6 +46,7 @@ FEED_CACHE_DIR = ROOT / "output" / "feeds"
 IMPORT_RUNS_PATH = ROOT / "output" / "import-runs.json"
 RUN_HISTORY_PATH = ROOT / "output" / "source-runs.json"
 FOOTBALL_DATA_MANIFEST_PATH = ROOT / "output" / "football-data-bl1-teams.json"
+SPORT_FEED_MANIFEST_PATH = ROOT / "output" / SPORT_FEED_MANIFEST_FILENAME
 CALENDAR_NAME = "YourCalendar German Football"
 SAMPLE_CALENDAR_NAME = "YourCalendar Sample Football"
 HOLIDAY_CALENDAR_NAME = "YourCalendar German Holidays"
@@ -64,6 +66,7 @@ FEED_PARAM_KEYS = (
     "maxEvents",
     "competition",
     "teamId",
+    "feedId",
 )
 
 
@@ -82,6 +85,12 @@ class PublishedCalendar:
     reliability_note: str
     data_warnings: tuple[str, ...]
     params: dict[str, str] | None
+    group_id: str = ""
+    subgroup_id: str = ""
+    sport_id: str = ""
+    league_name: str = ""
+    provider_key: str = ""
+    calendar_mode: str = ""
     sample: bool = False
 
 
@@ -385,8 +394,65 @@ def football_data_team_calendars() -> dict[str, PublishedCalendar]:
     return calendars
 
 
+def load_sport_feed_manifest() -> dict:
+    if not SPORT_FEED_MANIFEST_PATH.exists():
+        return {"calendars": [], "errors": []}
+    try:
+        data = json.loads(SPORT_FEED_MANIFEST_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {"calendars": [], "errors": []}
+    return data if isinstance(data, dict) else {"calendars": [], "errors": []}
+
+
+def sport_feed_calendars() -> dict[str, PublishedCalendar]:
+    manifest = load_sport_feed_manifest()
+    calendars: dict[str, PublishedCalendar] = {}
+    for item in manifest.get("calendars", []):
+        feed_id = str(item.get("feedId") or "").strip()
+        name = str(item.get("name") or "").strip()
+        if not feed_id or not name:
+            continue
+        provider = str(item.get("provider") or "Unbekannte Quelle").strip()
+        league_name = str(item.get("leagueName") or "").strip()
+        sport_name = str(item.get("sportName") or "Sport").strip()
+        event_count = item.get("eventCount")
+        event_label = f"{event_count} Termine" if isinstance(event_count, int) else "Termine aus Import"
+        mode = str(item.get("calendarMode") or "competition")
+        source_quality = str(item.get("sourceQuality") or "community")
+        quality_level = "official" if source_quality in {"paid_provider", "official"} else "community"
+        calendars[feed_id] = PublishedCalendar(
+            feed_id=feed_id,
+            category_id="sports",
+            name=name,
+            description=f"{sport_name}: {league_name} aus {provider}.",
+            source_label=f"{provider}, {source_quality.replace('_', ' ')}",
+            source_type=source_quality,
+            source_type_label="Provider-Quelle" if source_quality == "paid_provider" else "Community-Quelle",
+            quality_level=quality_level,
+            quality_label="Provider/Import" if source_quality == "paid_provider" else "Community, kein SLA",
+            update_policy="Der Serverless-Import aktualisiert diesen ICS-Feed täglich.",
+            reliability_note=f"{event_label}; Nutzungsrechte und Vollständigkeit bleiben je Provider zu prüfen.",
+            data_warnings=tuple(
+                warning
+                for warning in (
+                    item.get("sourceWarning"),
+                    "Der Webserver liefert diesen Kalender aus dem letzten erfolgreichen Feed-Cache.",
+                )
+                if warning
+            ),
+            params={"sample": "false", "source": "sport-feed", "feedId": feed_id},
+            group_id=str(item.get("groupId") or ""),
+            subgroup_id=str(item.get("subgroupId") or ""),
+            sport_id=str(item.get("sportId") or ""),
+            league_name=league_name,
+            provider_key=str(item.get("providerKey") or ""),
+            calendar_mode=mode,
+        )
+    return calendars
+
+
 def all_published_calendars() -> dict[str, PublishedCalendar]:
-    return {**PUBLISHED_CALENDARS, **football_data_team_calendars()}
+    return {**PUBLISHED_CALENDARS, **football_data_team_calendars(), **sport_feed_calendars()}
 
 
 def split_title(title: str) -> tuple[str, str]:
@@ -606,6 +672,12 @@ def calendar_payload(calendar: PublishedCalendar, absolute_url, checked_at: date
         },
         "feedUrl": feed_url,
         "subscribeUrl": absolute_url(feed_url) if feed_url else None,
+        "groupId": calendar.group_id,
+        "subgroupId": calendar.subgroup_id,
+        "sportId": calendar.sport_id,
+        "leagueName": calendar.league_name,
+        "providerKey": calendar.provider_key,
+        "calendarMode": calendar.calendar_mode,
     }
 
 
@@ -656,6 +728,12 @@ def load_events(params: dict[str, list[str]]) -> list:
             competition=params.get("competition", [FOOTBALL_DATA_DEFAULT_COMPETITION])[0] or FOOTBALL_DATA_DEFAULT_COMPETITION,
             tz_name=DEFAULT_TIMEZONE,
         )
+    if params.get("source", [""])[0] == "sport-feed":
+        feed_id = params.get("feedId", [""])[0]
+        cached = load_cached_feed(feed_id)
+        if cached is not None:
+            raise POCError("Cached sport feeds are served directly and cannot be re-rendered from web requests.")
+        raise POCError("Sport feed is not cached yet. Run the scheduled import job first.")
 
     leagues = selected_leagues(params)
     include_past = params.get("includePast", ["false"])[0] == "true"
@@ -998,6 +1076,11 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
                 "generatedAt": generated_at.isoformat(),
                 "qualityLegend": list(QUALITY_LEGEND),
                 "sportsCoverage": sports_coverage_payload(),
+                "sportTaxonomy": sport_taxonomy_payload(),
+                "sportFeedManifest": {
+                    "generatedAt": load_sport_feed_manifest().get("generatedAt"),
+                    "errors": load_sport_feed_manifest().get("errors", []),
+                },
                 "sourcePlan": source_plan_payload(),
                 "sourceMonitor": source_monitor_payload(latest_runs_by_source(RUN_HISTORY_PATH)),
                 "categories": categories,

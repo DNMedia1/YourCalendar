@@ -25,6 +25,8 @@ from football_data_org import (
     fetch_bundesliga_matches,
     fetch_bundesliga_teams,
 )
+from sport_feed_importers import import_sport_calendars, sport_manifest_payload
+from sport_feed_registry import SPORT_FEED_MANIFEST_FILENAME
 from web_app import PUBLISHED_CALENDARS, feed_filename, render_feed
 from yourcalendar_poc import render_ics
 
@@ -35,6 +37,7 @@ IMPORT_RUNS_PATH = ROOT / "output" / "import-runs.json"
 EVENT_SNAPSHOT_DIR = ROOT / "output" / "event-snapshots"
 EVENT_CHANGES_DIR = ROOT / "output" / "event-changes"
 FOOTBALL_DATA_MANIFEST_PATH = ROOT / "output" / "football-data-bl1-teams.json"
+SPORT_FEED_MANIFEST_PATH = ROOT / "output" / SPORT_FEED_MANIFEST_FILENAME
 
 RenderFeed = Callable[[str], tuple[str, bool]]
 
@@ -187,6 +190,66 @@ def save_football_data_manifest(payload: dict) -> None:
     )
 
 
+def save_sport_feed_manifest(payload: dict) -> None:
+    SPORT_FEED_MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
+    write_text_preserving_newlines(
+        SPORT_FEED_MANIFEST_PATH,
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+    )
+
+
+def import_imported_calendar(calendar) -> dict:
+    content = render_ics(calendar.events, calendar.name)
+    event_count = count_events(content)
+    previous_snapshot = load_snapshot(event_snapshot_path(calendar.feed_id))
+    current_snapshot = snapshot_from_ics(content)
+    changes = compare_snapshots(previous_snapshot, current_snapshot)
+    save_snapshot(event_snapshot_path(calendar.feed_id), current_snapshot)
+    save_changes(event_changes_path(calendar.feed_id), changes)
+    warnings = []
+    if event_count == 0:
+        warnings.append("Feed contains no events.")
+    if calendar.source_warning:
+        warnings.append(calendar.source_warning)
+    output_path = write_feed_cache(calendar.feed_id, content)
+    return {
+        "feedId": calendar.feed_id,
+        "status": "warning" if warnings else "success",
+        "startedAt": utc_now_iso(),
+        "finishedAt": utc_now_iso(),
+        "eventCount": event_count,
+        "sample": False,
+        "warnings": warnings,
+        "error": None,
+        "outputPath": display_path(output_path),
+        "changeSummary": summarize_changes(changes),
+        "changesPath": display_path(event_changes_path(calendar.feed_id)),
+    }
+
+
+def import_recommended_sport_calendars() -> list[dict]:
+    started_at = utc_now_iso()
+    calendars, errors = import_sport_calendars()
+    generated_at = utc_now_iso()
+    save_sport_feed_manifest(sport_manifest_payload(calendars, errors, generated_at))
+    results = [import_imported_calendar(calendar) for calendar in calendars]
+    results.extend(
+        {
+            "feedId": error.get("configId") or "sport-provider",
+            "status": "warning" if error.get("status") == "skipped" else "error",
+            "startedAt": started_at,
+            "finishedAt": utc_now_iso(),
+            "eventCount": None,
+            "sample": False,
+            "warnings": [error.get("message") or "Provider was not imported."],
+            "error": None if error.get("status") == "skipped" else error.get("message"),
+            "outputPath": display_path(SPORT_FEED_MANIFEST_PATH),
+        }
+        for error in errors
+    )
+    return results
+
+
 def import_football_data_bundesliga_team_calendars() -> list[dict]:
     started_at = utc_now_iso()
     if not os.getenv(FOOTBALL_DATA_TOKEN_ENV, "").strip():
@@ -263,7 +326,7 @@ def run_import_job(feed_ids: list[str] | None = None, renderer: RenderFeed = ren
     selected_feed_ids = feed_ids or importable_feed_ids()
     results = []
     if feed_ids is None:
-        results.extend(import_football_data_bundesliga_team_calendars())
+        results.extend(import_recommended_sport_calendars())
     results.extend(import_calendar(feed_id, renderer) for feed_id in selected_feed_ids)
     append_import_runs(results)
     return results

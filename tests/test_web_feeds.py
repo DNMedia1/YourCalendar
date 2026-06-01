@@ -182,6 +182,52 @@ class WebFeedTest(unittest.TestCase):
         self.assertEqual(params["teamId"], ["5"])
         self.assertFalse(is_sample)
 
+    def test_calendar_catalog_includes_generic_sport_feed_manifest(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            previous_manifest = web_app.SPORT_FEED_MANIFEST_PATH
+            web_app.SPORT_FEED_MANIFEST_PATH = Path(temp_dir) / "sport-feeds.json"
+            web_app.SPORT_FEED_MANIFEST_PATH.write_text(
+                """
+{
+  "version": 1,
+  "generatedAt": "2026-06-02T01:00:00+00:00",
+  "calendars": [
+    {
+      "feedId": "sport-basketball-nba-1-boston-celtics",
+      "name": "Boston Celtics NBA",
+      "groupId": "team-sports",
+      "subgroupId": "basketball",
+      "sportId": "basketball",
+      "sportName": "Basketball",
+      "leagueName": "NBA",
+      "provider": "TheSportsDB",
+      "providerKey": "thesportsdb",
+      "calendarMode": "team",
+      "sourceQuality": "community",
+      "eventCount": 82
+    }
+  ],
+  "errors": []
+}
+""".strip(),
+                encoding="utf-8",
+            )
+            try:
+                categories = calendar_catalog(lambda path: f"https://example.test{path}")
+            finally:
+                web_app.SPORT_FEED_MANIFEST_PATH = previous_manifest
+
+        sports = {category["id"]: category for category in categories}["sports"]
+        calendar = [
+            item for item in sports["calendars"]
+            if item["id"] == "sport-basketball-nba-1-boston-celtics"
+        ][0]
+
+        self.assertEqual(calendar["groupId"], "team-sports")
+        self.assertEqual(calendar["subgroupId"], "basketball")
+        self.assertEqual(calendar["leagueName"], "NBA")
+        self.assertEqual(calendar["providerKey"], "thesportsdb")
+
     def test_sports_coverage_exposes_europe_combat_and_championships(self) -> None:
         coverage = sports_coverage_payload()
 

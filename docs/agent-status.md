@@ -26,6 +26,17 @@ damit Agenten nicht gegeneinander arbeiten.
 
 ## Aktueller Intake-Snapshot
 
+### 2026-06-02 01:01 Europe/Berlin - Codex - sport-ics-provider-registry
+- Ziel: Konkrete Provider-Empfehlung je Sportart als gruppierte Sportseite und automatisierte ICS-Feed-Generierung umsetzen.
+- GitHub-Bezug: Kein Issue geclaimt; direkte User-Anforderung im Chat.
+- Status: Implementierung lokal weitgehend fertig, aber noch nicht final abgenommen wegen offenem HTTP-Smoke-Test.
+- Claim/Issue-Status: Kein GitHub-Claim erfolgt.
+- Geaenderte Dateien: `.github/workflows/import-feeds.yml`, `README.md`, `docs/hosting-scheduler-architecture.md`, `import_jobs.py`, `sport_feed_importers.py`, `sport_feed_registry.py`, `tests/test_import_jobs.py`, `tests/test_sport_feed_importers.py`, `tests/test_web_feeds.py`, `web/sport.css`, `web/sport.html`, `web/sport.js`, `web_app.py`, `docs/agent-status.md`.
+- Tests: `python -m py_compile football_data_org.py sport_feed_importers.py sport_feed_registry.py import_jobs.py web_app.py yourcalendar_poc.py` gruen; `python -B -m unittest discover -s tests -p "test_*.py"` gruen mit 55 Tests; `npm test` gruen mit 8 Tests; `python -B import_jobs.py --feed sample-ksc` gruen.
+- Neu gewonnenes Wissen: `football-data.org` ist als erster echter Bundesliga-Provider umgesetzt; TheSportsDB ist fuer mehrere US-/Teamsportarten integriert; Jolpica ist fuer Formel 1 integriert; Lichess, PandaScore und Tour de France sind im Registry-Modell vorhanden, aber aktuell bewusst nicht automatisch importiert.
+- Offene Risiken: Lokaler HTTP-Smoke-Test fuer `/api/calendars` zeigte trotz aktualisiertem `web_app.py` eine Antwort ohne `sportTaxonomy`; wahrscheinlich stale lokaler Server/Prozess, aber noch nicht sicher verifiziert. In-App-Browser-QA war wegen Node-REPL/Windows-Sandbox-Fehlern nicht moeglich. Der alte `football-data-bl1-teams.json`-Pfad wird aktuell weiterhin gemerged, damit bestehende Tests passen; fuer strikte Redundanzvermeidung sollte dieser Legacy-Pfad spaeter entfernt oder migriert werden.
+- Naechster sinnvoller Schritt: Frischen lokalen Server starten, `/api/calendars` und `web/sport.html` erneut pruefen, danach Legacy-Fussball-Manifest-Entscheidung treffen und final committen/PR erstellen.
+
 ### 2026-05-29 Europe/Berlin - Claude Code - Intake
 - Repo-Branch: `feat/issue-48-cypress-e2e` von sauberem `main` (`d1f8899`).
 - Worktree clean: yes vor Branch; danach neue Cypress-Dateien + aktualisierte `package-lock.json`.
