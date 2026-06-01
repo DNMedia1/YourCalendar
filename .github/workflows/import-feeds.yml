@@ -3,7 +3,8 @@ name: Import Feeds
 on:
   workflow_dispatch:
   schedule:
-    - cron: "17 */6 * * *"
+    # GitHub Actions cron is UTC; 01:00 UTC is 03:00 in Europe/Berlin during CEST.
+    - cron: "0 1 * * *"
 
 jobs:
   import-feeds:
@@ -16,8 +17,10 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile import modules
-        run: python3 -B -m py_compile import_jobs.py event_changes.py web_app.py yourcalendar_poc.py
+        run: python3 -B -m py_compile import_jobs.py event_changes.py football_data_org.py web_app.py yourcalendar_poc.py
       - name: Run import job
+        env:
+          FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
         run: python3 -B import_jobs.py
       - name: Upload import artifacts
         if: always()
@@ -27,6 +30,7 @@ jobs:
           path: |
             output/feeds/
             output/import-runs.json
+            output/football-data-bl1-teams.json
             output/event-snapshots/
             output/event-changes/
           if-no-files-found: warn

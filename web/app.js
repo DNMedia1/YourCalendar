@@ -443,6 +443,10 @@ function renderCategoryOverview() {
   }).join("");
   document.querySelectorAll(".category-summary").forEach((button) => {
     button.addEventListener("click", () => {
+      if (button.dataset.categoryId === "sports") {
+        window.location.href = "/sport.html";
+        return;
+      }
       state.selectedCategoryId = button.dataset.categoryId;
       renderCategoryOverview();
       renderCategoryTabs();

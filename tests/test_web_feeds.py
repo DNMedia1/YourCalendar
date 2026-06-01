@@ -113,6 +113,75 @@ class WebFeedTest(unittest.TestCase):
         self.assertFalse(championship_calendar["hasFeed"])
         self.assertIn("WM & EM", championship_calendar["name"])
 
+    def test_calendar_catalog_includes_football_data_team_manifest(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            previous_manifest = web_app.FOOTBALL_DATA_MANIFEST_PATH
+            web_app.FOOTBALL_DATA_MANIFEST_PATH = Path(temp_dir) / "football-data-bl1-teams.json"
+            web_app.FOOTBALL_DATA_MANIFEST_PATH.write_text(
+                """
+{
+  "provider": "football-data.org",
+  "competition": "BL1",
+  "teams": [
+    {
+      "id": 5,
+      "name": "FC Bayern München",
+      "shortName": "Bayern",
+      "competition": "BL1",
+      "feedId": "football-data-bl1-5-fc-bayern-muenchen",
+      "eventCount": 34
+    }
+  ]
+}
+""".strip(),
+                encoding="utf-8",
+            )
+            try:
+                categories = calendar_catalog(lambda path: f"https://example.test{path}")
+            finally:
+                web_app.FOOTBALL_DATA_MANIFEST_PATH = previous_manifest
+
+        sports = {category["id"]: category for category in categories}["sports"]
+        team_calendar = [
+            calendar for calendar in sports["calendars"]
+            if calendar["id"] == "football-data-bl1-5-fc-bayern-muenchen"
+        ][0]
+
+        self.assertTrue(team_calendar["hasFeed"])
+        self.assertEqual(team_calendar["sourceLabel"], "football-data.org, Provider-Daten")
+        self.assertEqual(team_calendar["feedUrl"], "/feeds/football-data-bl1-5-fc-bayern-muenchen.ics")
+
+    def test_football_data_feed_resolves_from_manifest(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            previous_manifest = web_app.FOOTBALL_DATA_MANIFEST_PATH
+            web_app.FOOTBALL_DATA_MANIFEST_PATH = Path(temp_dir) / "football-data-bl1-teams.json"
+            web_app.FOOTBALL_DATA_MANIFEST_PATH.write_text(
+                """
+{
+  "teams": [
+    {
+      "id": 5,
+      "name": "FC Bayern München",
+      "shortName": "Bayern",
+      "competition": "BL1",
+      "feedId": "football-data-bl1-5-fc-bayern-muenchen",
+      "eventCount": 34
+    }
+  ]
+}
+""".strip(),
+                encoding="utf-8",
+            )
+            try:
+                calendar_name, params, is_sample = resolve_feed("football-data-bl1-5-fc-bayern-muenchen", "")
+            finally:
+                web_app.FOOTBALL_DATA_MANIFEST_PATH = previous_manifest
+
+        self.assertEqual(calendar_name, "Bayern Bundesliga-Kalender")
+        self.assertEqual(params["source"], ["football-data"])
+        self.assertEqual(params["teamId"], ["5"])
+        self.assertFalse(is_sample)
+
     def test_sports_coverage_exposes_europe_combat_and_championships(self) -> None:
         coverage = sports_coverage_payload()
 

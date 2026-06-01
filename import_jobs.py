@@ -17,7 +17,16 @@ from event_changes import (
     snapshot_from_ics,
     summarize_changes,
 )
+from football_data_org import (
+    DEFAULT_COMPETITION,
+    FOOTBALL_DATA_PROVIDER_LABEL,
+    FOOTBALL_DATA_TOKEN_ENV,
+    events_by_team,
+    fetch_bundesliga_matches,
+    fetch_bundesliga_teams,
+)
 from web_app import PUBLISHED_CALENDARS, feed_filename, render_feed
+from yourcalendar_poc import render_ics
 
 
 ROOT = Path(__file__).resolve().parent
@@ -25,6 +34,7 @@ FEED_CACHE_DIR = ROOT / "output" / "feeds"
 IMPORT_RUNS_PATH = ROOT / "output" / "import-runs.json"
 EVENT_SNAPSHOT_DIR = ROOT / "output" / "event-snapshots"
 EVENT_CHANGES_DIR = ROOT / "output" / "event-changes"
+FOOTBALL_DATA_MANIFEST_PATH = ROOT / "output" / "football-data-bl1-teams.json"
 
 RenderFeed = Callable[[str], tuple[str, bool]]
 
@@ -146,9 +156,115 @@ def import_calendar(feed_id: str, renderer: RenderFeed = render_feed) -> dict:
         }
 
 
+def football_data_manifest_payload(teams: list, grouped_events: dict[int, list], generated_at: str) -> dict:
+    return {
+        "provider": FOOTBALL_DATA_PROVIDER_LABEL,
+        "competition": DEFAULT_COMPETITION,
+        "generatedAt": generated_at,
+        "teams": [
+            {
+                "id": team.team_id,
+                "name": team.name,
+                "shortName": team.short_name,
+                "tla": team.tla,
+                "venue": team.venue,
+                "competition": DEFAULT_COMPETITION,
+                "feedId": team.feed_id,
+                "feedPath": f"/feeds/{team.feed_id}.ics",
+                "eventCount": len(grouped_events.get(team.team_id, [])),
+                "updatedAt": generated_at,
+            }
+            for team in teams
+        ],
+    }
+
+
+def save_football_data_manifest(payload: dict) -> None:
+    FOOTBALL_DATA_MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
+    write_text_preserving_newlines(
+        FOOTBALL_DATA_MANIFEST_PATH,
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+    )
+
+
+def import_football_data_bundesliga_team_calendars() -> list[dict]:
+    started_at = utc_now_iso()
+    if not os.getenv(FOOTBALL_DATA_TOKEN_ENV, "").strip():
+        return [
+            {
+                "feedId": "football-data-bl1-teams",
+                "status": "error",
+                "startedAt": started_at,
+                "finishedAt": utc_now_iso(),
+                "eventCount": None,
+                "sample": False,
+                "warnings": [],
+                "error": f"{FOOTBALL_DATA_TOKEN_ENV} is not configured.",
+                "outputPath": display_path(FOOTBALL_DATA_MANIFEST_PATH),
+            }
+        ]
+
+    try:
+        teams = fetch_bundesliga_teams()
+        matches = fetch_bundesliga_matches()
+        grouped_events = events_by_team(teams, matches)
+        generated_at = utc_now_iso()
+        save_football_data_manifest(football_data_manifest_payload(teams, grouped_events, generated_at))
+    except Exception as exc:
+        return [
+            {
+                "feedId": "football-data-bl1-teams",
+                "status": "error",
+                "startedAt": started_at,
+                "finishedAt": utc_now_iso(),
+                "eventCount": None,
+                "sample": False,
+                "warnings": [],
+                "error": str(exc),
+                "outputPath": display_path(FOOTBALL_DATA_MANIFEST_PATH),
+            }
+        ]
+
+    results = []
+    for team in teams:
+        feed_id = team.feed_id
+        events = grouped_events.get(team.team_id, [])
+        calendar_name = f"{team.short_name} Bundesliga-Kalender"
+        content = render_ics(events, calendar_name)
+        event_count = count_events(content)
+        previous_snapshot = load_snapshot(event_snapshot_path(feed_id))
+        current_snapshot = snapshot_from_ics(content)
+        changes = compare_snapshots(previous_snapshot, current_snapshot)
+        save_snapshot(event_snapshot_path(feed_id), current_snapshot)
+        save_changes(event_changes_path(feed_id), changes)
+        warnings = []
+        if event_count == 0:
+            warnings.append("Feed contains no events.")
+        output_path = write_feed_cache(feed_id, content)
+        results.append(
+            {
+                "feedId": feed_id,
+                "status": "warning" if warnings else "success",
+                "startedAt": started_at,
+                "finishedAt": utc_now_iso(),
+                "eventCount": event_count,
+                "sample": False,
+                "warnings": warnings,
+                "error": None,
+                "outputPath": display_path(output_path),
+                "changeSummary": summarize_changes(changes),
+                "changesPath": display_path(event_changes_path(feed_id)),
+            }
+        )
+    return results
+
+
 def run_import_job(feed_ids: list[str] | None = None, renderer: RenderFeed = render_feed) -> list[dict]:
     selected_feed_ids = feed_ids or importable_feed_ids()
-    results = [import_calendar(feed_id, renderer) for feed_id in selected_feed_ids]
+    results = []
+    if feed_ids is None:
+        results.extend(import_football_data_bundesliga_team_calendars())
+    results.extend(import_calendar(feed_id, renderer) for feed_id in selected_feed_ids)
     append_import_runs(results)
     return results
 

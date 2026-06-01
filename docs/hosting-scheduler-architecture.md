@@ -46,10 +46,12 @@ flowchart LR
 Der erste betreibbare Scheduler kann als GitHub Actions Workflow laufen:
 
 - `workflow_dispatch` für manuelle Läufe
-- `schedule` für regelmäßige Aktualisierung
+- `schedule` für tägliche Aktualisierung um 03:00 Europe/Berlin während CEST
+  (`0 1 * * *`, GitHub Actions cron läuft in UTC)
 - Import über `python3 -B import_jobs.py`
 - Feed-Cache und Logs als Artefakte
 - Kein Commit von generierten Feeds zurück ins Repository
+- `FOOTBALL_DATA_API_KEY` als Secret für football-data.org Bundesliga-Teamfeeds
 
 Wenn später ein Hosting-Anbieter Cronjobs, persistenten Speicher und Deploy Hooks bereitstellt, kann derselbe Importbefehl unverändert dort ausgeführt werden.
 

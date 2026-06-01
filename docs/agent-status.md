@@ -106,6 +106,17 @@ damit Agenten nicht gegeneinander arbeiten.
 
 ## Handoff Log
 
+### 2026-06-01 23:27 Europe/Berlin - Codex - ics-calendar_integration
+- Ziel: Richtigen ICS-Flow fuer Bundesliga-Teamkalender mit football-data.org Provider, taeglichem Serverless-Import und Sport-Unterseite umsetzen.
+- GitHub-Bezug: Kein neues Issue geclaimt; User gab direkten Implementierungsauftrag im Chat.
+- Status: Umsetzung lokal fertig; relevante Checks gruen.
+- Claim/Issue-Status: Kein GitHub-Claim aus dieser direkten lokalen Arbeit.
+- Geaenderte Dateien: `football_data_org.py`, `import_jobs.py`, `web_app.py`, `.github/workflows/import-feeds.yml`, `web/app.js`, `web/sport.html`, `web/sport.js`, `web/sport.css`, `web/tailwind.css`, Tests und Doku.
+- Tests: Python py_compile mit lokalem Pycache-Prefix gruen; `python -B -m unittest discover -s tests -p "test_*.py"` gruen, 51 Tests; `npm test` gruen; `python -B import_jobs.py --feed sample-ksc` gruen mit erhoehter Ausfuehrung.
+- Neu gewonnenes Wissen: football-data.org v4 nutzt `X-Auth-Token`; Competition `/competitions/BL1/teams` und Team-Match-Subresource `/teams/{id}/matches` sind dokumentierte Pfade. GitHub Actions cron laeuft in UTC, daher ist `0 1 * * *` 03:00 in Europe/Berlin waehrend CEST.
+- Offene Risiken: Ohne GitHub Secret `FOOTBALL_DATA_API_KEY` schreibt der football-data Import nur einen Fehlerlauf und keine Teamfeeds. 03:00 Europe/Berlin ist mit GitHub Actions ohne separate Zeitzonenlogik nicht ganzjaehrig DST-sicher. In-App-Browser-QA war durch Sandbox-Fehler blockiert; lokaler HTTP-Smoke-Test fuer `/sport.html`, `/sport.js`, `/sport.css` und `/api/calendars` war erfolgreich.
+- Naechster sinnvoller Schritt: `FOOTBALL_DATA_API_KEY` als GitHub Secret setzen, Workflow manuell ausloesen, Artefakte pruefen und danach entscheiden, ob der Feed-Cache in einen persistenten Storage/CDN wandern soll.
+
 ### 2026-06-01 01:53 Europe/Berlin - Codex - codex/repo-clean-code-guide
 - Ziel: Nach Rebase erneut auf Clean-Code-/Repo-Hygiene-Probleme pruefen und konkrete Rebase-Artefakte korrigieren.
 - GitHub-Bezug: Kein neuer Issue-Claim; Fortsetzung des lokalen Branches `codex/repo-clean-code-guide`.

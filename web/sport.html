@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sportkalender | YourCalendar</title>
+    <link rel="preload" href="/tailwind.css" as="style" />
+    <link rel="stylesheet" href="/tailwind.css" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/sport.css" />
+    <link rel="stylesheet" href="/mobile.css" />
+  </head>
+  <body>
+    <main class="sport-page">
+      <header class="sport-header">
+        <a class="button secondary" href="/">Zurueck</a>
+        <div>
+          <span class="eyebrow">Sport</span>
+          <h1>Bundesliga-Kalender</h1>
+        </div>
+        <span id="sportCalendarCount">Laedt</span>
+      </header>
+
+      <section class="sport-feed-note" aria-live="polite">
+        <strong>Erste Bundesliga</strong>
+        <p>Die Teamkalender werden vom taeglichen Serverless-Import aus football-data.org erzeugt und als ICS-Feeds ausgeliefert.</p>
+      </section>
+
+      <section class="sport-calendar-grid" id="sportCalendarGrid" aria-live="polite"></section>
+    </main>
+    <script src="/sport.js"></script>
+  </body>
+</html>

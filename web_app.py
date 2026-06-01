@@ -15,6 +15,11 @@ from urllib.parse import parse_qs, urlencode, urlparse
 from zoneinfo import ZoneInfo
 
 from sports_source_registry import list_source_candidates, source_candidate_sports
+from football_data_org import (
+    DEFAULT_COMPETITION as FOOTBALL_DATA_DEFAULT_COMPETITION,
+    FOOTBALL_DATA_PROVIDER_LABEL,
+    fetch_football_data_team_events,
+)
 from yourcalendar_poc import (
     DEFAULT_OUTPUT,
     DEFAULT_TIMEZONE,
@@ -39,9 +44,11 @@ OUTPUT_PATH = ROOT / DEFAULT_OUTPUT
 FEED_CACHE_DIR = ROOT / "output" / "feeds"
 IMPORT_RUNS_PATH = ROOT / "output" / "import-runs.json"
 RUN_HISTORY_PATH = ROOT / "output" / "source-runs.json"
+FOOTBALL_DATA_MANIFEST_PATH = ROOT / "output" / "football-data-bl1-teams.json"
 CALENDAR_NAME = "YourCalendar German Football"
 SAMPLE_CALENDAR_NAME = "YourCalendar Sample Football"
 HOLIDAY_CALENDAR_NAME = "YourCalendar German Holidays"
+FOOTBALL_DATA_BL1_NAME = "YourCalendar Bundesliga"
 CURRENT_FEED_ID = "current"
 FEED_PARAM_KEYS = (
     "sample",
@@ -55,6 +62,8 @@ FEED_PARAM_KEYS = (
     "subdivision",
     "year",
     "maxEvents",
+    "competition",
+    "teamId",
 )
 
 
@@ -328,6 +337,58 @@ PUBLISHED_CALENDARS = {
 }
 
 
+def load_football_data_team_manifest() -> dict:
+    if not FOOTBALL_DATA_MANIFEST_PATH.exists():
+        return {"teams": []}
+    try:
+        data = json.loads(FOOTBALL_DATA_MANIFEST_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {"teams": []}
+    return data if isinstance(data, dict) else {"teams": []}
+
+
+def football_data_team_calendars() -> dict[str, PublishedCalendar]:
+    manifest = load_football_data_team_manifest()
+    calendars: dict[str, PublishedCalendar] = {}
+    for team in manifest.get("teams", []):
+        feed_id = str(team.get("feedId") or "").strip()
+        team_id = str(team.get("id") or "").strip()
+        name = str(team.get("name") or "").strip()
+        if not feed_id or not team_id or not name:
+            continue
+        short_name = str(team.get("shortName") or name).strip()
+        event_count = team.get("eventCount")
+        count_label = f"{event_count} kommende Spiele" if isinstance(event_count, int) else "Kommende Spiele"
+        calendars[feed_id] = PublishedCalendar(
+            feed_id=feed_id,
+            category_id="sports",
+            name=f"{short_name} Bundesliga-Kalender",
+            description=f"Erste-Bundesliga-Spielplan von {name} aus football-data.org.",
+            source_label=f"{FOOTBALL_DATA_PROVIDER_LABEL}, Provider-Daten",
+            source_type="paid_provider",
+            source_type_label="Provider-Quelle",
+            quality_level="official",
+            quality_label="Provider, API-Key",
+            update_policy="Der Serverless-Import aktualisiert diesen Feed täglich um 03:00 Uhr.",
+            reliability_note=f"{count_label}; Rechte, Tarif und Attribution bleiben providerabhängig.",
+            data_warnings=(
+                "Der Feed benötigt FOOTBALL_DATA_API_KEY im Cron- oder Hosting-Environment.",
+                "Logos, Wappen und Bildrechte sind nicht Teil dieses Feeds.",
+            ),
+            params={
+                "sample": "false",
+                "source": "football-data",
+                "competition": str(team.get("competition") or FOOTBALL_DATA_DEFAULT_COMPETITION),
+                "teamId": team_id,
+            },
+        )
+    return calendars
+
+
+def all_published_calendars() -> dict[str, PublishedCalendar]:
+    return {**PUBLISHED_CALENDARS, **football_data_team_calendars()}
+
+
 def split_title(title: str) -> tuple[str, str]:
     if " vs " not in title:
         return title, ""
@@ -401,6 +462,12 @@ def params_from_calendar(calendar: PublishedCalendar) -> dict[str, list[str]]:
 def calendar_name_for_params(params: dict[str, list[str]]) -> str:
     if params.get("source", [""])[0] == "holidays":
         return HOLIDAY_CALENDAR_NAME
+    if params.get("source", [""])[0] == "football-data":
+        team_id = params.get("teamId", [""])[0]
+        for calendar in football_data_team_calendars().values():
+            if calendar.params and calendar.params.get("teamId") == team_id:
+                return calendar.name
+        return FOOTBALL_DATA_BL1_NAME
     return SAMPLE_CALENDAR_NAME if params.get("sample", ["false"])[0] == "true" else CALENDAR_NAME
 
 
@@ -412,7 +479,7 @@ def feed_path_for_params(params: dict[str, list[str]]) -> str:
 
 
 def published_feed_path(feed_id: str) -> str:
-    calendar = PUBLISHED_CALENDARS.get(feed_id)
+    calendar = all_published_calendars().get(feed_id)
     if calendar is None or calendar.params is None:
         raise KeyError(feed_id)
     return f"/feeds/{feed_id}.ics"
@@ -432,7 +499,7 @@ def normalize_ics_newlines(content: str) -> str:
 
 
 def load_cached_feed(feed_id: str, query: str = "") -> str | None:
-    if query or feed_id not in PUBLISHED_CALENDARS:
+    if query or feed_id not in all_published_calendars():
         return None
     path = cached_feed_path(feed_id)
     if not path.exists():
@@ -446,7 +513,7 @@ def resolve_feed(feed_id: str, query: str) -> tuple[str, dict[str, list[str]], b
         params = normalize_feed_params(parse_qs(query))
         return calendar_name_for_params(params), params, params.get("sample", ["false"])[0] == "true"
 
-    calendar = PUBLISHED_CALENDARS[feed_id]
+    calendar = all_published_calendars()[feed_id]
     if calendar.params is None:
         raise KeyError(feed_id)
     return calendar.name, params_from_calendar(calendar), calendar.sample
@@ -547,7 +614,7 @@ def calendar_catalog(absolute_url, now: datetime | None = None) -> list[dict]:
     calendars_by_category: dict[str, list[dict]] = {
         category.category_id: [] for category in CALENDAR_CATEGORIES
     }
-    for calendar in PUBLISHED_CALENDARS.values():
+    for calendar in all_published_calendars().values():
         calendars_by_category.setdefault(calendar.category_id, []).append(
             calendar_payload(calendar, absolute_url, checked_at)
         )
@@ -578,6 +645,15 @@ def load_events(params: dict[str, list[str]]) -> list:
             country_code=params.get("country", ["DE"])[0] or "DE",
             subdivision=params.get("subdivision", [""])[0],
             max_events=max_events,
+            tz_name=DEFAULT_TIMEZONE,
+        )
+    if params.get("source", [""])[0] == "football-data":
+        team_id_raw = params.get("teamId", [""])[0]
+        if not team_id_raw.isdigit():
+            raise POCError("football-data teamId is required for team calendars.")
+        return fetch_football_data_team_events(
+            team_id=int(team_id_raw),
+            competition=params.get("competition", [FOOTBALL_DATA_DEFAULT_COMPETITION])[0] or FOOTBALL_DATA_DEFAULT_COMPETITION,
             tz_name=DEFAULT_TIMEZONE,
         )
 
@@ -625,6 +701,9 @@ def source_health_payload(
     source_id = "yourcalendar-sample" if use_sample else "openligadb-football"
     if source == "holidays" and not use_sample:
         source_id = "nager-date-holidays"
+    if source == "football-data" and not use_sample:
+        team_id = params.get("teamId", ["team"])[0] or "team"
+        source_id = f"football-data-bl1-{team_id}"
 
     monitor_observation = {
         "sourceId": source_id,
@@ -649,7 +728,11 @@ def source_health_payload(
         }
 
     if error:
-        title = "Nager.Date konnte nicht gelesen werden" if source == "holidays" else "OpenLigaDB konnte nicht gelesen werden"
+        title_by_source = {
+            "holidays": "Nager.Date konnte nicht gelesen werden",
+            "football-data": "football-data.org konnte nicht gelesen werden",
+        }
+        title = title_by_source.get(source, "OpenLigaDB konnte nicht gelesen werden")
         return {
             "status": "error",
             "label": "Quelle gestört",
@@ -685,6 +768,28 @@ def source_health_payload(
                 **monitor_observation,
                 "status": status,
                 "message": "Der Nager.Date-Abruf lieferte Feiertage." if count else "Der Nager.Date-Abruf lieferte keine Feiertage.",
+            },
+        }
+
+    if source == "football-data":
+        status = "ok" if count else "empty"
+        return {
+            "status": status,
+            "label": "football-data.org" if count else "Keine Termine",
+            "title": "football-data.org liefert Bundesliga-Termine" if count else "Keine kommenden Bundesliga-Termine",
+            "detail": (
+                "Providerdaten fuer den Bundesliga-Teamkalender. "
+                "Der produktive Cron braucht FOOTBALL_DATA_API_KEY als Secret."
+            ),
+            "hints": [
+                "API-Key, Tarif und Attribution fuer den Produktionsbetrieb pruefen.",
+                "Bei leeren Feeds den letzten erfolgreichen Cache weiter ausliefern.",
+            ],
+            "selectedLeagues": ["1. Bundesliga"],
+            "monitorObservation": {
+                **monitor_observation,
+                "status": status,
+                "message": "Der football-data.org-Abruf lieferte Termine." if count else "Der football-data.org-Abruf lieferte keine Termine.",
             },
         }
 
@@ -1083,7 +1188,7 @@ class YourCalendarHandler(SimpleHTTPRequestHandler):
         if content is None:
             content, is_sample = render_feed(feed_id, query)
         else:
-            is_sample = PUBLISHED_CALENDARS[feed_id].sample
+            is_sample = all_published_calendars()[feed_id].sample
         content_bytes = content.encode("utf-8")
         if is_sample and "[SAMPLE]" not in content:
             self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Sample feed is not clearly marked.")
@@ -1143,7 +1248,7 @@ def build_import_status(runs: list[dict]) -> list[dict]:
             latest_by_feed[feed_id] = run
 
     statuses = []
-    for feed_id, calendar in PUBLISHED_CALENDARS.items():
+    for feed_id, calendar in all_published_calendars().items():
         latest = latest_by_feed.get(feed_id)
         if not latest:
             statuses.append(
@@ -1196,6 +1301,11 @@ def source_note(use_sample: bool, source: str, count: int) -> str:
         return (
             "Nager.Date Feiertagsdaten für den PoC. "
             "Nicht als amtliche Quelle oder finale Rechtsentscheidung behandeln."
+        )
+    if source == "football-data":
+        return (
+            "football-data.org Providerdaten fuer Bundesliga-Teamkalender. "
+            "Der produktive Import braucht FOOTBALL_DATA_API_KEY als Secret."
         )
     if count == 0:
         return (
