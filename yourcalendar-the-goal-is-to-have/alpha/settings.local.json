@@ -1,0 +1,18 @@
+﻿{
+    "site_title":  "YourCalendar Alpha",
+    "host":  "127.0.0.1",
+    "port":  8081,
+    "public_base_url":  "http://127.0.0.1:8080",
+    "mapping_file":  "data/mapping.csv",
+    "group_logo_settings_file":  "data/group_logo_settings.csv",
+    "ics_output_dir":  "public/ics",
+    "refresh_interval_hours":  6,
+    "management_api_key_env":  "YOURCALENDAR_MANAGEMENT_API_KEY",
+    "default_event_duration_minutes":  120,
+    "provider_defaults":  {
+                              "TheSportsDB":  {
+                                                  "free_api_key":  "123",
+                                                  "base_url":  "https://www.thesportsdb.com/api/v1/json"
+                                              }
+                          }
+}

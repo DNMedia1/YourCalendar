@@ -1,0 +1,18 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//YourCalendar//Alpha//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Borussia Mönchengladbach
+BEGIN:VEVENT
+UID:thesportsdb-2478865@yourcalendar-alpha
+DTSTAMP:20260602T232147Z
+DTSTART:20260725T120000Z
+DTEND:20260725T140000Z
+SUMMARY:Rot-Weiss Essen vs Borussia Mönchengladbach
+LOCATION:Stadion an der Hafenstraße
+DESCRIPTION:Wettbewerb: Club Friendlies\\nProvider: TheSportsDB\\nProvider 
+ Event ID: 2478865\\nStatus: NS
+SEQUENCE:229509
+END:VEVENT
+END:VCALENDAR
