@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 
-from .provider_id_resolver import resolve_provider_id
+from .provider_resolvers import resolve_provider_id
 
 
 def build_mapping_and_lock_rows(

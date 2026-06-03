@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from .base import ProviderIdResolver
+from .thesportsdb import resolve_thesportsdb_provider_id
 
-from .thesportsdb_team_resolver import resolve_provider_id as resolve_thesportsdb_provider_id
-
-
-ProviderIdResolver = Callable[[dict[str, str]], str]
 
 PROVIDER_ID_RESOLVERS: dict[str, ProviderIdResolver] = {
     "TheSportsDB": resolve_thesportsdb_provider_id,

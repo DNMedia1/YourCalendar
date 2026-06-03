@@ -12,7 +12,7 @@ calendar, fetches provider events, renders ICS files, and exposes those files
 through the website.
 
 The current Alpha focuses on sports team calendars. The included mapping covers
-250 team calendars. The football mapping contains 218 team calendars for:
+280 team calendars. The football mapping contains 218 team calendars for:
 
 - Germany: 1. Bundesliga, 2. Bundesliga, 3. Bundesliga
 - Spain: La Liga, La Liga 2
@@ -23,6 +23,10 @@ The current Alpha focuses on sports team calendars. The included mapping covers
 The American football mapping contains 32 NFL team calendars under:
 
 - United States: Football/NFL
+
+The basketball mapping contains 30 NBA team calendars under:
+
+- United States: Basketball/NBA
 
 Important domain assumption: the current football mapping intentionally contains
 men's teams. Reserve teams can appear. Women's teams are intentionally excluded
@@ -78,7 +82,7 @@ yourcalendar_alpha/
   domain/         core data classes
   ics/            ICS rendering, parsing, formatting, sequence calculation
   mapping/        CSV mapping and group-logo loading
-  providers/      provider contract, registry, TheSportsDB implementation
+providers/      provider contract, registry, TheSportsDB implementation
   sync/           sync service, change counters, CLI report formatting
   web/            HTTP handler, HTML renderer, CSS, JavaScript
 ```
@@ -193,7 +197,9 @@ Class attributes and methods:
 
 ### 4.7 `providers.thesportsdb_provider.TheSportsDBProvider`
 
-Current concrete provider.
+Current concrete provider. It is intentionally sport-agnostic for team calendars:
+football, NFL, and NBA entries all use the same provider contract. The mapping
+entry's `ICSId` is interpreted as TheSportsDB `idTeam`.
 
 Constructor attributes:
 
@@ -209,10 +215,15 @@ Methods:
 | Method | Meaning |
 |---|---|
 | `fetch_events(entry)` | Fetches next and last events and maps them to `CalendarEvent`. |
-| `fetch_json(entry, endpoint, params)` | Calls one TheSportsDB endpoint and decodes JSON. |
-| `api_key_for(entry)` | Reads the configured environment key or falls back. |
 
-The provider interprets `entry.ics_id` as TheSportsDB `idTeam`.
+Collaborators:
+
+| Class/File | Meaning |
+|---|---|
+| `providers.thesportsdb_client.TheSportsDBClient` | Handles TheSportsDB URL construction, API-key lookup, HTTP calls, and JSON decoding. |
+| `providers.thesportsdb_team_event_fetcher.TheSportsDBTeamEventFetcher` | Fetches `eventsnext.php` and `eventslast.php` for one team ID and deduplicates mapped events. |
+| `providers.thesportsdb_event_mapper` | Converts one raw provider event into a provider-independent `CalendarEvent`. |
+| `providers.thesportsdb_datetime` | Parses TheSportsDB date/time fields into timezone-aware datetimes. |
 
 ### 4.8 `web.http_handler.CalendarHttpRequestHandler`
 
@@ -303,6 +314,7 @@ The sports mapping generator reads multiple curated source files:
 
 - `data/football_team_source.csv`
 - `data/nfl_team_source.csv`
+- `data/nba_team_source.csv`
 
 `data/football_team_source.csv` uses the legacy football defaults. If
 `Kategorie` and `Kalenderpfad` are absent, the generator uses `Sport` and
@@ -318,6 +330,18 @@ Wettbewerb=Football/NFL
 ```
 
 The `Football` group is configured with `groupOrder=2` in
+`data/group_logo_settings.csv`.
+
+`data/nba_team_source.csv` also declares `Kategorie` and `Kalenderpfad`
+explicitly. NBA mappings use:
+
+```text
+Kategorie=Sport
+Kalenderpfad=Basketball/NBA
+Wettbewerb=Basketball/NBA
+```
+
+The `Basketball` group is configured with `groupOrder=3` in
 `data/group_logo_settings.csv`.
 
 | Column | Meaning |
@@ -352,6 +376,7 @@ of editing `data/mapping.csv` manually:
 
 - football teams: `data/football_team_source.csv`
 - NFL teams: `data/nfl_team_source.csv`
+- NBA teams: `data/nba_team_source.csv`
 
 Then run:
 
@@ -481,6 +506,19 @@ The script should:
    endpoint is verified as complete.
 9. Include tests or contract checks for expected counts and critical IDs.
 
+The current sports generator resolves provider IDs through:
+
+```text
+tools/manual_mapping/provider_resolvers/
+  base.py          provider resolver type alias
+  registry.py      API-Provider name to resolver lookup
+  thesportsdb.py   TheSportsDB idTeam verification and lookup
+```
+
+To add another mapping provider, add a resolver file in that directory and
+register it in `provider_resolvers/registry.py`. The resolver receives the
+source row and returns the provider-specific `ICSId`.
+
 For a new category, define the category-specific source format explicitly. At
 minimum it should contain:
 
@@ -579,7 +617,9 @@ verifies:
 - source file has expected teams and order values
 - group logo settings cover all group paths and define numeric `groupOrder`
 - NFL mappings exist under `Football/NFL`
-- top-level sport groups are ordered with `Fussball=1` and `Football=2`
+- NBA mappings exist under `Basketball/NBA`
+- top-level sport groups are ordered with `Fussball=1`, `Football=2`, and
+  `Basketball=3`
 
 ### 9.6 Optional Live Provider Test
 

@@ -28,7 +28,7 @@ Der zentrale Nutzen:
 
 ## 2. Auffaelliger fachlicher Hinweis
 
-Die aktuelle Fussball-Mapping-Datei enthaelt Maennerteams und erlaubt Reserveteams
+Die aktuelle Fussball-Mapping-Quelle enthaelt Maennerteams und erlaubt Reserveteams
 wie `Real Sociedad B`, `Hoffenheim II` oder `VfB Stuttgart II`.
 
 Frauenteams sind in dieser Mapping-Datei absichtlich ausgeschlossen. Fuer
@@ -40,8 +40,8 @@ Provider-Suchen teilweise Frauenteams vor Maennerteams zurueckliefern.
 
 Die Alpha enthaelt:
 
-- CSV-Mapping fuer 218 Fussball-Teamkalender.
-- Gruppenstruktur `Sport > Fussball > Land > Liga > Team`.
+- CSV-Mapping fuer 280 Sport-Teamkalender.
+- Gruppenstruktur fuer Fussball, Football/NFL und Basketball/NBA.
 - Statische Provider-ID-Sperrdatei `data/mapping.provider-lock.csv`.
 - TheSportsDB-Provider fuer Event-Sync.
 - ICS-Renderer.
@@ -63,6 +63,9 @@ alpha/
     mapping.csv
     mapping.provider-lock.csv
     group_logo_settings.csv
+    football_team_source.csv
+    nfl_team_source.csv
+    nba_team_source.csv
   public/
     ics/
   tests/
@@ -72,8 +75,11 @@ alpha/
       config.py
       csv_table.py
       provider_lock_diff.py
+      provider_resolvers/
+        base.py
+        registry.py
+        thesportsdb.py
       team_source_loader.py
-      thesportsdb_team_resolver.py
     resolve_manual_team_ids.py
   yourcalendar_alpha/
     calendar/
@@ -100,9 +106,11 @@ alpha/
       base.py
       errors.py
       registry.py
+      thesportsdb_client.py
       thesportsdb_datetime.py
       thesportsdb_event_mapper.py
       thesportsdb_provider.py
+      thesportsdb_team_event_fetcher.py
     sync/
       change_counter.py
       report.py
@@ -284,6 +292,8 @@ Beispiele:
 Fussball/Deutschland/1. Bundesliga/FC Augsburg
 Fussball/England/Premier League/Arsenal
 Fussball/Spanien/La Liga 2/Real Sociedad B
+Football/NFL/Kansas City Chiefs
+Basketball/NBA/Boston Celtics
 ```
 
 Regeln:
@@ -299,7 +309,7 @@ Eine kontextfremde Person kann einen neuen Eintrag so hinzufuegen:
 
 1. Pruefen, ob der passende Provider bereits existiert.
 2. Provider-spezifische ID ermitteln. Fuer `TheSportsDB` ist das aktuell `idTeam`.
-3. Neue Zeile in `data/football_team_source.csv` ergaenzen oder eine vergleichbare Source-Datei pflegen.
+3. Neue Zeile in der passenden Source-Datei ergaenzen, z. B. `data/football_team_source.csv`, `data/nfl_team_source.csv` oder `data/nba_team_source.csv`.
 4. `SubGroupOrder` innerhalb derselben Liga/Untergruppe eindeutig setzen.
 5. `data/mapping.provider-lock.csv` um Team, ICSId und Provider erweitern.
 6. `python tools/resolve_manual_team_ids.py` ausfuehren, um `data/mapping.csv` neu zu erstellen.
@@ -329,9 +339,9 @@ TheSportsDB-IDs auf.
 
 Wichtig:
 
-- Das Skript nutzt `data/football_team_source.csv` als vollstaendige fachliche Team-Quelle.
+- Das Skript nutzt die konfigurierten Source-Dateien als vollstaendige fachliche Team-Quelle.
 - Es nutzt nicht den auf 10 Teams begrenzten TheSportsDB-Liga-Endpunkt.
-- Die Team-Auswahl ist kuratiert und enthaelt alle aktuell gewuenschten Vereine je Liga.
+- Die Team-Auswahl ist kuratiert und enthaelt alle aktuell gewuenschten Teams je Wettbewerb.
 - TheSportsDB wird nur genutzt, um Provider-IDs zu ermitteln oder zu verifizieren.
 - Beim erneuten Ausfuehren wird gegen `mapping.provider-lock.csv` verglichen.
 - Wenn sich IDs aendern, schlaegt das Skript fehl.
@@ -403,6 +413,9 @@ TheSportsDB-Regel:
 - Events kommen aus `eventsnext.php?id=<idTeam>` und `eventslast.php?id=<idTeam>`.
 - API-Key kommt aus der Umgebungsvariable in `API-Key-Provider`.
 - Wenn kein Key vorhanden ist, wird der freie Beispiel-Key aus `settings.json` verwendet.
+- HTTP/API-Key-Zugriff liegt in `providers/thesportsdb_client.py`.
+- Team-Event-Abruf und Deduplizierung liegen in `providers/thesportsdb_team_event_fetcher.py`.
+- Mapping-ID-Aufloesung liegt unter `tools/manual_mapping/provider_resolvers/`.
 
 ## 11. Neuen Provider implementieren
 

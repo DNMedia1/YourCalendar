@@ -4,10 +4,10 @@ import json
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
-from .config import THESPORTSDB_BASE_URL
+from ..config import THESPORTSDB_BASE_URL
 
 
-def resolve_provider_id(source: dict[str, str]) -> str:
+def resolve_thesportsdb_provider_id(source: dict[str, str]) -> str:
     existing_id = source.get("ICSId") or ""
     if existing_id:
         team = lookup_thesportsdb_team(existing_id)

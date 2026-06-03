@@ -91,6 +91,44 @@ class ProviderAndSyncTests(unittest.TestCase):
         self.assertTrue(any("eventsnext.php?id=134931" in call for call in calls))
         self.assertTrue(any("eventslast.php?id=134931" in call for call in calls))
 
+    def test_thesportsdb_maps_nba_team_events_with_same_provider_contract(self) -> None:
+        payload = {
+            "events": [
+                {
+                    "idEvent": "nba-9001",
+                    "dateEvent": "2026-10-21",
+                    "strTime": "19:30:00",
+                    "strEvent": "Boston Celtics vs New York Knicks",
+                    "strHomeTeam": "Boston Celtics",
+                    "strAwayTeam": "New York Knicks",
+                    "strVenue": "TD Garden",
+                    "strCity": "Boston",
+                    "strLeague": "NBA",
+                }
+            ]
+        }
+        calls: list[str] = []
+
+        def opener(url: str, timeout: int = 30) -> FakeResponse:
+            calls.append(url)
+            return FakeResponse(payload)
+
+        provider = TheSportsDBProvider(
+            base_url="https://example.test/api",
+            free_api_key="123",
+            default_duration_minutes=150,
+            opener=opener,
+        )
+        entry = CalendarEntry("Basketball/NBA/Boston Celtics", "United States", "Sport", "Basketball/NBA", "TheSportsDB", "", "134860", None, 2)
+
+        events = provider.fetch_events(entry)
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].title, "Boston Celtics vs New York Knicks")
+        self.assertEqual(events[0].location, "TD Garden, Boston")
+        self.assertTrue(any("eventsnext.php?id=134860" in call for call in calls))
+        self.assertTrue(any("eventslast.php?id=134860" in call for call in calls))
+
     def test_sync_writes_ics_and_reports_changes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -15,6 +15,7 @@ MAPPING = ROOT / "data" / "mapping.csv"
 LOCK = ROOT / "data" / "mapping.provider-lock.csv"
 FOOTBALL_SOURCE = ROOT / "data" / "football_team_source.csv"
 NFL_SOURCE = ROOT / "data" / "nfl_team_source.csv"
+NBA_SOURCE = ROOT / "data" / "nba_team_source.csv"
 GROUP_LOGOS = ROOT / "data" / "group_logo_settings.csv"
 
 EXPECTED_COUNTS = {
@@ -30,6 +31,7 @@ EXPECTED_COUNTS = {
     ("Italien", "Serie A"): 20,
     ("Italien", "Serie B"): 20,
     ("United States", "Football/NFL"): 32,
+    ("United States", "Basketball/NBA"): 30,
 }
 
 KNOWN_PROVIDER_IDS = {
@@ -46,6 +48,10 @@ KNOWN_PROVIDER_IDS = {
     "Kansas City Chiefs": "134931",
     "Tennessee Titans": "134929",
     "Washington Commanders": "134937",
+    "Boston Celtics": "134860",
+    "Golden State Warriors": "134865",
+    "Los Angeles Lakers": "134867",
+    "Washington Wizards": "134884",
 }
 
 WOMENS_MARKERS = ("women", "femenino", "female", "frauen")
@@ -95,7 +101,7 @@ class MappingContractTests(unittest.TestCase):
         self.assertEqual(load_csv(LOCK), mapping_rows)
 
     def test_source_contains_all_expected_teams_and_orders(self) -> None:
-        source_rows = load_csv(FOOTBALL_SOURCE) + load_csv(NFL_SOURCE)
+        source_rows = load_csv(FOOTBALL_SOURCE) + load_csv(NFL_SOURCE) + load_csv(NBA_SOURCE)
         self.assertEqual(len(source_rows), sum(EXPECTED_COUNTS.values()))
         for group, count in EXPECTED_COUNTS.items():
             orders = sorted(
@@ -121,6 +127,7 @@ class MappingContractTests(unittest.TestCase):
             self.assertTrue(row["groupOrder"].isdigit(), row["GroupPath"])
         self.assertEqual(group_order(group_logo_rows, "Sport", "Fussball"), 1)
         self.assertEqual(group_order(group_logo_rows, "Sport", "Football"), 2)
+        self.assertEqual(group_order(group_logo_rows, "Sport", "Basketball"), 3)
 
 
 @unittest.skipUnless(os.environ.get("RUN_LIVE_PROVIDER_TESTS") == "1", "set RUN_LIVE_PROVIDER_TESTS=1")
