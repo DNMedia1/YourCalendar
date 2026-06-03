@@ -9,11 +9,29 @@ from fake_response import FakeResponse
 from static_provider import StaticProvider
 from yourcalendar_alpha.domain.calendar_entry import CalendarEntry
 from yourcalendar_alpha.domain.calendar_event import CalendarEvent
+from yourcalendar_alpha.providers.openf1_provider import OpenF1Provider
+from yourcalendar_alpha.providers.registry import build_provider_registry
 from yourcalendar_alpha.providers.thesportsdb_provider import TheSportsDBProvider
 from yourcalendar_alpha.sync.service import sync_all_calendars
 
 
 class ProviderAndSyncTests(unittest.TestCase):
+    def test_provider_registry_registers_openf1(self) -> None:
+        registry = build_provider_registry(
+            {
+                "default_event_duration_minutes": 120,
+                "provider_defaults": {
+                    "OpenF1": {
+                        "base_url": "https://example.test/v1",
+                        "years": [2026],
+                    }
+                },
+            }
+        )
+
+        self.assertIn("OpenF1", registry)
+        self.assertIsInstance(registry["OpenF1"], OpenF1Provider)
+
     def test_thesportsdb_maps_events_to_calendar_events(self) -> None:
         payload = {
             "events": [
@@ -128,6 +146,44 @@ class ProviderAndSyncTests(unittest.TestCase):
         self.assertEqual(events[0].location, "TD Garden, Boston")
         self.assertTrue(any("eventsnext.php?id=134860" in call for call in calls))
         self.assertTrue(any("eventslast.php?id=134860" in call for call in calls))
+
+    def test_openf1_maps_formula1_sessions_to_calendar_events(self) -> None:
+        payload = [
+            {
+                "meeting_key": 1244,
+                "session_key": 9574,
+                "meeting_name": "Bahrain Grand Prix",
+                "meeting_official_name": "FORMULA 1 GULF AIR BAHRAIN GRAND PRIX 2026",
+                "session_name": "Race",
+                "session_type": "Race",
+                "date_start": "2026-03-08T15:00:00+00:00",
+                "date_end": "2026-03-08T17:00:00+00:00",
+                "country_name": "Bahrain",
+                "location": "Sakhir",
+                "circuit_short_name": "Sakhir",
+            }
+        ]
+        calls: list[str] = []
+
+        def opener(url: str, timeout: int = 30) -> FakeResponse:
+            calls.append(url)
+            return FakeResponse(payload)
+
+        provider = OpenF1Provider(
+            base_url="https://example.test/v1",
+            default_duration_minutes=120,
+            years=[2026],
+            opener=opener,
+        )
+        entry = CalendarEntry("Motorsport/Formel 1/Veranstaltungen", "Global", "Sport", "Motorsport/Formel 1", "OpenF1", "", "formula-1", None, 1)
+
+        events = provider.fetch_events(entry)
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].uid, "openf1-1244-9574@yourcalendar-alpha")
+        self.assertEqual(events[0].title, "Bahrain Grand Prix - Race")
+        self.assertEqual(events[0].location, "Sakhir, Sakhir, Bahrain")
+        self.assertIn("sessions?year=2026", calls[0])
 
     def test_sync_writes_ics_and_reports_changes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

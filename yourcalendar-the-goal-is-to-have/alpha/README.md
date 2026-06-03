@@ -40,10 +40,10 @@ Provider-Suchen teilweise Frauenteams vor Maennerteams zurueckliefern.
 
 Die Alpha enthaelt:
 
-- CSV-Mapping fuer 280 Sport-Teamkalender.
-- Gruppenstruktur fuer Fussball, Football/NFL und Basketball/NBA.
+- CSV-Mapping fuer 281 Sportkalender.
+- Gruppenstruktur fuer Fussball, Football/NFL, Basketball/NBA und Motorsport/Formel 1.
 - Statische Provider-ID-Sperrdatei `data/mapping.provider-lock.csv`.
-- TheSportsDB-Provider fuer Event-Sync.
+- TheSportsDB- und OpenF1-Provider fuer Event-Sync.
 - ICS-Renderer.
 - HTTP-Website mit responsiver Kachelansicht.
 - Scheduler-Loop fuer 6-Stunden-Aktualisierung.
@@ -66,6 +66,7 @@ alpha/
     football_team_source.csv
     nfl_team_source.csv
     nba_team_source.csv
+    formula1_event_source.csv
   public/
     ics/
   tests/
@@ -105,6 +106,10 @@ alpha/
     providers/
       base.py
       errors.py
+      openf1_client.py
+      openf1_datetime.py
+      openf1_event_mapper.py
+      openf1_provider.py
       registry.py
       thesportsdb_client.py
       thesportsdb_datetime.py
@@ -196,7 +201,7 @@ Die Website-Verantwortung ist in der Alpha bewusst getrennt:
 Weitere Verantwortlichkeiten sind ebenfalls getrennt:
 
 - `ics/`: ICS-Ausgabe, bestehende Event-Sequenzen und Formatierungsregeln.
-- `providers/`: generischer Provider-Vertrag, Fehler, Registrierung und konkrete TheSportsDB-Anbindung.
+- `providers/`: generischer Provider-Vertrag, Fehler, Registrierung sowie konkrete TheSportsDB- und OpenF1-Anbindungen.
 - `sync/`: Synchronisationsfluss, Change-Zaehler und CLI-Ausgabe.
 - `config/`: Settings laden und Pfade aufloesen.
 
@@ -294,6 +299,7 @@ Fussball/England/Premier League/Arsenal
 Fussball/Spanien/La Liga 2/Real Sociedad B
 Football/NFL/Kansas City Chiefs
 Basketball/NBA/Boston Celtics
+Motorsport/Formel 1/Veranstaltungen
 ```
 
 Regeln:
@@ -308,7 +314,7 @@ Regeln:
 Eine kontextfremde Person kann einen neuen Eintrag so hinzufuegen:
 
 1. Pruefen, ob der passende Provider bereits existiert.
-2. Provider-spezifische ID ermitteln. Fuer `TheSportsDB` ist das aktuell `idTeam`.
+2. Provider-spezifische ID ermitteln. Fuer `TheSportsDB` ist das aktuell `idTeam`; fuer OpenF1/Formel 1 ist es `formula-1`.
 3. Neue Zeile in der passenden Source-Datei ergaenzen, z. B. `data/football_team_source.csv`, `data/nfl_team_source.csv` oder `data/nba_team_source.csv`.
 4. `SubGroupOrder` innerhalb derselben Liga/Untergruppe eindeutig setzen.
 5. `data/mapping.provider-lock.csv` um Team, ICSId und Provider erweitern.
@@ -398,6 +404,7 @@ Aktuell implementiert:
 
 ```text
 TheSportsDB
+OpenF1
 ```
 
 Provider-Schluessel im Mapping:
@@ -405,6 +412,7 @@ Provider-Schluessel im Mapping:
 ```csv
 API-Provider
 TheSportsDB
+OpenF1
 ```
 
 TheSportsDB-Regel:
@@ -416,6 +424,14 @@ TheSportsDB-Regel:
 - HTTP/API-Key-Zugriff liegt in `providers/thesportsdb_client.py`.
 - Team-Event-Abruf und Deduplizierung liegen in `providers/thesportsdb_team_event_fetcher.py`.
 - Mapping-ID-Aufloesung liegt unter `tools/manual_mapping/provider_resolvers/`.
+
+OpenF1-Regel:
+
+- `ICSId=formula-1` steht fuer den Formel-1-Veranstaltungskalender.
+- Sessions kommen aus `sessions?year=<year>`.
+- HTTP-Zugriff liegt in `providers/openf1_client.py`.
+- Session-Mapping liegt in `providers/openf1_event_mapper.py`.
+- Die Source-Datei kann mit `tools/create_openf1_formula1_mapping.py` idempotent erstellt werden.
 
 ## 11. Neuen Provider implementieren
 
@@ -532,6 +548,7 @@ Vor Abschluss eines Aenderungspakets pruefen:
 
 - `ICSId` ist aktuell gleichzeitig Provider-ID und lokaler ICS-Dateiname.
 - Fuer TheSportsDB bedeutet `ICSId`: `idTeam`.
+- Fuer OpenF1/Formel 1 bedeutet `ICSId`: `formula-1`.
 - Der freie TheSportsDB-Key `123` ist nur fuer Alpha-/Testzwecke geeignet.
 - Externe Kalenderabos brauchen eine oeffentlich erreichbare URL.
 - Die Teamlisten wurden fuer die Alpha kuratiert; Ligen koennen sich saisonal aendern.

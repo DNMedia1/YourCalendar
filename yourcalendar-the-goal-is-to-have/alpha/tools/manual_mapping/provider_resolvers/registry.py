@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from .base import ProviderIdResolver
+from .openf1 import resolve_openf1_provider_id
 from .thesportsdb import resolve_thesportsdb_provider_id
 
 
 PROVIDER_ID_RESOLVERS: dict[str, ProviderIdResolver] = {
+    "OpenF1": resolve_openf1_provider_id,
     "TheSportsDB": resolve_thesportsdb_provider_id,
 }
 

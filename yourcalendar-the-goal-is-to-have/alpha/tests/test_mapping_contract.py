@@ -16,6 +16,7 @@ LOCK = ROOT / "data" / "mapping.provider-lock.csv"
 FOOTBALL_SOURCE = ROOT / "data" / "football_team_source.csv"
 NFL_SOURCE = ROOT / "data" / "nfl_team_source.csv"
 NBA_SOURCE = ROOT / "data" / "nba_team_source.csv"
+FORMULA1_SOURCE = ROOT / "data" / "formula1_event_source.csv"
 GROUP_LOGOS = ROOT / "data" / "group_logo_settings.csv"
 
 EXPECTED_COUNTS = {
@@ -32,6 +33,7 @@ EXPECTED_COUNTS = {
     ("Italien", "Serie B"): 20,
     ("United States", "Football/NFL"): 32,
     ("United States", "Basketball/NBA"): 30,
+    ("Global", "Motorsport/Formel 1"): 1,
 }
 
 KNOWN_PROVIDER_IDS = {
@@ -67,9 +69,13 @@ class MappingContractTests(unittest.TestCase):
             key = (row["Land"], row["Wettbewerb"])
             actual_counts[key] = actual_counts.get(key, 0) + 1
             self.assertEqual(row["Kategorie"], "Sport")
-            self.assertEqual(row["API-Provider"], "TheSportsDB")
-            self.assertEqual(row["API-Key-Provider"], "THESPORTSDB_API_KEY")
-            self.assertTrue(row["ICSId"].isdigit(), row["Kalendername"])
+            self.assertIn(row["API-Provider"], {"TheSportsDB", "OpenF1"})
+            if row["API-Provider"] == "TheSportsDB":
+                self.assertEqual(row["API-Key-Provider"], "THESPORTSDB_API_KEY")
+                self.assertTrue(row["ICSId"].isdigit(), row["Kalendername"])
+            if row["API-Provider"] == "OpenF1":
+                self.assertEqual(row["API-Key-Provider"], "")
+                self.assertEqual(row["ICSId"], "formula-1")
             self.assertTrue(row["SubGroupOrder"].isdigit(), row["Kalendername"])
             self.assertNotIn("/Women/", row["Kalendername"])
 
@@ -101,7 +107,12 @@ class MappingContractTests(unittest.TestCase):
         self.assertEqual(load_csv(LOCK), mapping_rows)
 
     def test_source_contains_all_expected_teams_and_orders(self) -> None:
-        source_rows = load_csv(FOOTBALL_SOURCE) + load_csv(NFL_SOURCE) + load_csv(NBA_SOURCE)
+        source_rows = (
+            load_csv(FOOTBALL_SOURCE)
+            + load_csv(NFL_SOURCE)
+            + load_csv(NBA_SOURCE)
+            + load_csv(FORMULA1_SOURCE)
+        )
         self.assertEqual(len(source_rows), sum(EXPECTED_COUNTS.values()))
         for group, count in EXPECTED_COUNTS.items():
             orders = sorted(
@@ -128,12 +139,25 @@ class MappingContractTests(unittest.TestCase):
         self.assertEqual(group_order(group_logo_rows, "Sport", "Fussball"), 1)
         self.assertEqual(group_order(group_logo_rows, "Sport", "Football"), 2)
         self.assertEqual(group_order(group_logo_rows, "Sport", "Basketball"), 3)
+        self.assertEqual(group_order(group_logo_rows, "Sport", "Motorsport"), 4)
+
+    def test_formula1_mapping_uses_openf1_provider(self) -> None:
+        rows = load_csv(MAPPING)
+        formula1_rows = [row for row in rows if row["Kalendername"] == "Motorsport/Formel 1/Veranstaltungen"]
+
+        self.assertEqual(len(formula1_rows), 1)
+        self.assertEqual(formula1_rows[0]["Kategorie"], "Sport")
+        self.assertEqual(formula1_rows[0]["Wettbewerb"], "Motorsport/Formel 1")
+        self.assertEqual(formula1_rows[0]["API-Provider"], "OpenF1")
+        self.assertEqual(formula1_rows[0]["ICSId"], "formula-1")
 
 
 @unittest.skipUnless(os.environ.get("RUN_LIVE_PROVIDER_TESTS") == "1", "set RUN_LIVE_PROVIDER_TESTS=1")
 class LiveProviderMappingTests(unittest.TestCase):
     def test_all_mapping_ids_exist_and_do_not_resolve_to_womens_entries(self) -> None:
         for row in load_csv(MAPPING):
+            if row["API-Provider"] != "TheSportsDB":
+                continue
             payload = fetch_team(row["ICSId"])
             self.assertIsNotNone(payload, row["Kalendername"])
             haystack = " ".join(

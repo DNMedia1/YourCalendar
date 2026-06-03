@@ -4,7 +4,7 @@ import json
 
 
 class FakeResponse:
-    def __init__(self, payload: dict) -> None:
+    def __init__(self, payload: dict | list) -> None:
         self.payload = payload
 
     def __enter__(self) -> "FakeResponse":

@@ -11,8 +11,8 @@ process reads the mapping, selects the configured API provider for each
 calendar, fetches provider events, renders ICS files, and exposes those files
 through the website.
 
-The current Alpha focuses on sports team calendars. The included mapping covers
-280 team calendars. The football mapping contains 218 team calendars for:
+The current Alpha focuses on sports calendars. The included mapping covers 281
+calendars. The football mapping contains 218 team calendars for:
 
 - Germany: 1. Bundesliga, 2. Bundesliga, 3. Bundesliga
 - Spain: La Liga, La Liga 2
@@ -27,6 +27,10 @@ The American football mapping contains 32 NFL team calendars under:
 The basketball mapping contains 30 NBA team calendars under:
 
 - United States: Basketball/NBA
+
+The motorsport mapping contains one Formula 1 event calendar under:
+
+- Global: Motorsport/Formel 1
 
 Important domain assumption: the current football mapping intentionally contains
 men's teams. Reserve teams can appear. Women's teams are intentionally excluded
@@ -82,7 +86,7 @@ yourcalendar_alpha/
   domain/         core data classes
   ics/            ICS rendering, parsing, formatting, sequence calculation
   mapping/        CSV mapping and group-logo loading
-providers/      provider contract, registry, TheSportsDB implementation
+  providers/      provider contract, registry, TheSportsDB and OpenF1 implementations
   sync/           sync service, change counters, CLI report formatting
   web/            HTTP handler, HTML renderer, CSS, JavaScript
 ```
@@ -225,6 +229,30 @@ Collaborators:
 | `providers.thesportsdb_event_mapper` | Converts one raw provider event into a provider-independent `CalendarEvent`. |
 | `providers.thesportsdb_datetime` | Parses TheSportsDB date/time fields into timezone-aware datetimes. |
 
+### 4.8 `providers.openf1_provider.OpenF1Provider`
+
+Provider for Formula 1 event calendars through the OpenF1 API. The current Alpha
+uses one mapping entry, `Motorsport/Formel 1/Veranstaltungen`, with
+`ICSId=formula-1`. The provider fetches OpenF1 sessions and maps every session
+to a provider-independent `CalendarEvent`.
+
+Constructor attributes:
+
+| Attribute | Meaning |
+|---|---|
+| `base_url` | OpenF1 API base URL without trailing slash. |
+| `default_duration_minutes` | Event duration used when OpenF1 has no valid `date_end`. |
+| `years` | Optional list of years to fetch. Defaults to the current UTC year. |
+| `opener` | HTTP opener, injectable for tests. |
+
+Collaborators:
+
+| Class/File | Meaning |
+|---|---|
+| `providers.openf1_client.OpenF1Client` | Handles OpenF1 URL construction, HTTP calls, and JSON decoding. |
+| `providers.openf1_event_mapper` | Converts one OpenF1 session into a `CalendarEvent`. |
+| `providers.openf1_datetime` | Parses OpenF1 ISO timestamps into UTC datetimes. |
+
 ### 4.8 `web.http_handler.CalendarHttpRequestHandler`
 
 HTTP route handler.
@@ -315,6 +343,7 @@ The sports mapping generator reads multiple curated source files:
 - `data/football_team_source.csv`
 - `data/nfl_team_source.csv`
 - `data/nba_team_source.csv`
+- `data/formula1_event_source.csv`
 
 `data/football_team_source.csv` uses the legacy football defaults. If
 `Kategorie` and `Kalenderpfad` are absent, the generator uses `Sport` and
@@ -342,6 +371,19 @@ Wettbewerb=Basketball/NBA
 ```
 
 The `Basketball` group is configured with `groupOrder=3` in
+`data/group_logo_settings.csv`.
+
+`data/formula1_event_source.csv` declares one Formula 1 event calendar:
+
+```text
+Kategorie=Sport
+Kalenderpfad=Motorsport/Formel 1
+Wettbewerb=Motorsport/Formel 1
+API-Provider=OpenF1
+ICSId=formula-1
+```
+
+The `Motorsport` group is configured with `groupOrder=4` in
 `data/group_logo_settings.csv`.
 
 | Column | Meaning |
@@ -377,6 +419,7 @@ of editing `data/mapping.csv` manually:
 - football teams: `data/football_team_source.csv`
 - NFL teams: `data/nfl_team_source.csv`
 - NBA teams: `data/nba_team_source.csv`
+- Formula 1 events: `data/formula1_event_source.csv`
 
 Then run:
 
@@ -453,6 +496,7 @@ from .example_provider import ExampleProvider
 def build_provider_registry(settings: dict[str, Any]) -> dict[str, CalendarProvider]:
     return {
         "TheSportsDB": TheSportsDBProvider(...),
+        "OpenF1": OpenF1Provider(...),
         "ExampleProvider": ExampleProvider(...),
     }
 ```
@@ -511,6 +555,7 @@ The current sports generator resolves provider IDs through:
 ```text
 tools/manual_mapping/provider_resolvers/
   base.py          provider resolver type alias
+  openf1.py        fixed Formula 1 mapping ID validation
   registry.py      API-Provider name to resolver lookup
   thesportsdb.py   TheSportsDB idTeam verification and lookup
 ```
@@ -592,6 +637,7 @@ verifies:
 `tests/test_provider_and_sync.py` verifies:
 
 - TheSportsDB payloads map to `CalendarEvent`
+- OpenF1 session payloads map to `CalendarEvent`
 - event UID uses the provider event ID
 - venue and city are combined into location
 - both `eventsnext.php` and `eventslast.php` are called
@@ -606,9 +652,11 @@ verifies:
 - expected league counts
 - total number of mapping rows
 - category is `Sport`
-- provider is `TheSportsDB`
-- provider API key environment variable is `THESPORTSDB_API_KEY`
-- `ICSId` and `SubGroupOrder` are numeric
+- provider is either `TheSportsDB` or `OpenF1`
+- TheSportsDB provider API key environment variable is `THESPORTSDB_API_KEY`
+- TheSportsDB `ICSId` values are numeric
+- OpenF1 uses `ICSId=formula-1`
+- `SubGroupOrder` is numeric
 - no `/Women/` path appears
 - `ICSId` values are unique
 - `SubGroupOrder` is contiguous per league
@@ -618,8 +666,9 @@ verifies:
 - group logo settings cover all group paths and define numeric `groupOrder`
 - NFL mappings exist under `Football/NFL`
 - NBA mappings exist under `Basketball/NBA`
+- Formula 1 mapping exists under `Motorsport/Formel 1`
 - top-level sport groups are ordered with `Fussball=1`, `Football=2`, and
-  `Basketball=3`
+  `Basketball=3`, and `Motorsport=4`
 
 ### 9.6 Optional Live Provider Test
 
@@ -643,6 +692,7 @@ This test is intentionally slow and network-dependent.
   source files.
 - `ICSId` is both provider ID and local ICS filename stem.
 - TheSportsDB `ICSId` means `idTeam`.
+- OpenF1 `ICSId=formula-1` identifies the single Formula 1 event calendar.
 - External subscriptions require a public HTTPS `public_base_url`.
 - The free TheSportsDB key in settings is only suitable for Alpha/testing.
 - The current team list is curated and can become outdated when leagues change.
