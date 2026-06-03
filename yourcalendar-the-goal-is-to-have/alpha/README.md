@@ -203,6 +203,7 @@ Jede Zeile ist genau ein abonnierbarer Kalender.
 | `API-Key-Provider` | string | nein | Name der Umgebungsvariable fuer Provider-API-Key. |
 | `ICSId` | string | ja | Provider-ID und lokale ICS-Datei-ID. |
 | `LogoBytes` | bytes/base64 | nein | Base64-kodiertes Logo. Leer ist erlaubt. |
+| `SubGroupOrder` | integer | ja | Reihenfolge der Kalenderkacheln innerhalb derselben Untergruppe. |
 
 ### 7.2 Kalendername-Regel
 
@@ -233,16 +234,18 @@ Eine kontextfremde Person kann einen neuen Eintrag so hinzufuegen:
 
 1. Pruefen, ob der passende Provider bereits existiert.
 2. Provider-spezifische ID ermitteln. Fuer `TheSportsDB` ist das aktuell `idTeam`.
-3. Neue CSV-Zeile in `data/mapping.csv` ergaenzen.
-4. Bei Bedarf passenden Gruppenpfad in `data/group_logo_settings.csv` ergaenzen.
+3. Neue Zeile in `data/football_team_source.csv` ergaenzen oder eine vergleichbare Source-Datei pflegen.
+4. `SubGroupOrder` innerhalb derselben Liga/Untergruppe eindeutig setzen.
 5. `data/mapping.provider-lock.csv` um Team, ICSId und Provider erweitern.
-6. Tests ausfuehren.
+6. `python tools/resolve_manual_team_ids.py` ausfuehren, um `data/mapping.csv` neu zu erstellen.
+7. Bei Bedarf passenden Gruppenpfad in `data/group_logo_settings.csv` ergaenzen.
+8. Tests ausfuehren.
 
 Beispiel:
 
 ```csv
 Kalendername,Land,Kategorie,Wettbewerb,API-Provider,API-Key-Provider,ICSId,LogoBytes
-Fussball/Deutschland/Bundesliga/FC Augsburg,Deutschland,Sport,Bundesliga,TheSportsDB,THESPORTSDB_API_KEY,133652,
+Fussball/Deutschland/Bundesliga/FC Augsburg,Deutschland,Sport,Bundesliga,TheSportsDB,THESPORTSDB_API_KEY,133652,,1
 ```
 
 ### 7.4 Fehler, die vermieden werden muessen
@@ -261,12 +264,14 @@ TheSportsDB-IDs auf.
 
 Wichtig:
 
-- Das Skript ist nicht die Quelle der fachlichen Team-Auswahl.
-- Die Team-Auswahl ist kuratiert.
+- Das Skript nutzt `data/football_team_source.csv` als vollstaendige fachliche Team-Quelle.
+- Es nutzt nicht den auf 10 Teams begrenzten TheSportsDB-Liga-Endpunkt.
+- Die Team-Auswahl ist kuratiert und enthaelt alle aktuell gewuenschten Vereine je Liga.
 - TheSportsDB wird nur genutzt, um Provider-IDs zu ermitteln oder zu verifizieren.
 - Beim erneuten Ausfuehren wird gegen `mapping.provider-lock.csv` verglichen.
 - Wenn sich IDs aendern, schlaegt das Skript fehl.
 - Nur mit `--update-lock` werden geaenderte IDs bewusst akzeptiert.
+- `SubGroupOrder` wird aus der Source-Datei in `mapping.csv` uebernommen und von der Website zur Sortierung der Kalenderkacheln genutzt.
 
 Ausfuehren:
 
@@ -275,11 +280,18 @@ cd alpha
 python tools/resolve_manual_team_ids.py
 ```
 
+Provider-IDs live neu verifizieren oder ermitteln:
+
+```powershell
+cd alpha
+python tools/resolve_manual_team_ids.py --refresh-provider
+```
+
 Geaenderte IDs bewusst akzeptieren:
 
 ```powershell
 cd alpha
-python tools/resolve_manual_team_ids.py --update-lock
+python tools/resolve_manual_team_ids.py --refresh-provider --update-lock
 ```
 
 ## 9. GroupLogoSettings

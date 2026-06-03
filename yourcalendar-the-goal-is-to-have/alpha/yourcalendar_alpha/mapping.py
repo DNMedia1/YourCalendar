@@ -15,6 +15,7 @@ REQUIRED_COLUMNS = [
     "API-Key-Provider",
     "ICSId",
     "LogoBytes",
+    "SubGroupOrder",
 ]
 
 
@@ -28,6 +29,7 @@ class CalendarEntry:
     api_key_provider: str
     ics_id: str
     logo_bytes: bytes | None
+    subgroup_order: int
 
     @property
     def path_parts(self) -> list[str]:
@@ -86,6 +88,10 @@ def load_mapping(path: str | Path) -> list[CalendarEntry]:
             path_parts = [part.strip() for part in values["Kalendername"].split("/") if part.strip()]
             if not path_parts:
                 raise ValueError(f"Row {row_number} has an empty Kalendername path")
+            try:
+                subgroup_order = int(values["SubGroupOrder"])
+            except ValueError as exc:
+                raise ValueError(f"Row {row_number} has invalid SubGroupOrder") from exc
 
             entries.append(
                 CalendarEntry(
@@ -97,6 +103,7 @@ def load_mapping(path: str | Path) -> list[CalendarEntry]:
                     api_key_provider=values["API-Key-Provider"],
                     ics_id=values["ICSId"],
                     logo_bytes=_decode_logo(values["LogoBytes"], row_number, "LogoBytes"),
+                    subgroup_order=subgroup_order,
                 )
             )
     return entries

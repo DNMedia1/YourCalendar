@@ -8,16 +8,7 @@ from yourcalendar_alpha.web_app import CSS, JS, build_tree, calendar_public_url,
 
 class WebAppTests(unittest.TestCase):
     def test_build_tree_groups_by_category_and_path(self) -> None:
-        entry = CalendarEntry(
-            calendar_name="Fussball/Deutschland/Bundesliga/Test Team",
-            country="Deutschland",
-            category="Sport",
-            competition="Bundesliga",
-            api_provider="TheSportsDB",
-            api_key_provider="",
-            ics_id="42",
-            logo_bytes=None,
-        )
+        entry = make_entry("Test Team", 1)
 
         tree = build_tree([entry])
 
@@ -32,17 +23,7 @@ class WebAppTests(unittest.TestCase):
         self.assertEqual(calendar_public_url(settings, "team 42"), "https://calendar.example/ics/team_42.ics")
 
     def test_render_category_uses_flat_tile_grid_markup(self) -> None:
-        entry = CalendarEntry(
-            calendar_name="Fussball/Deutschland/Bundesliga/Test Team",
-            country="Deutschland",
-            category="Sport",
-            competition="Bundesliga",
-            api_provider="TheSportsDB",
-            api_key_provider="",
-            ics_id="42",
-            logo_bytes=None,
-        )
-        tree = build_tree([entry])
+        tree = build_tree([make_entry("Test Team", 1)])
 
         markup = render_category("Sport", tree["Sport"], {"public_base_url": "https://calendar.example"}, {})
 
@@ -54,19 +35,7 @@ class WebAppTests(unittest.TestCase):
         self.assertIn("Test Team", markup)
 
     def test_render_index_contains_active_tree_behavior(self) -> None:
-        entry = CalendarEntry(
-            calendar_name="Fussball/Deutschland/Bundesliga/Test Team",
-            country="Deutschland",
-            category="Sport",
-            competition="Bundesliga",
-            api_provider="TheSportsDB",
-            api_key_provider="",
-            ics_id="42",
-            logo_bytes=None,
-        )
-        # Use temporary direct rendering through render_category for markup around details;
-        # active-tree behavior itself lives in the global CSS/JS constants.
-        tree = build_tree([entry])
+        tree = build_tree([make_entry("Test Team", 1)])
         markup = render_category("Sport", tree["Sport"], {"public_base_url": "https://calendar.example"}, {})
 
         self.assertIn('class="group-panel"', markup)
@@ -82,6 +51,29 @@ class WebAppTests(unittest.TestCase):
         self.assertIn("data-theme-toggle", JS)
         self.assertIn("localStorage.setItem('yc-theme'", JS)
         self.assertIn("aria-pressed", JS)
+
+    def test_calendar_tiles_are_sorted_by_subgroup_order(self) -> None:
+        first = make_entry("First Team", 1, "1")
+        second = make_entry("Second Team", 2, "2")
+        tree = build_tree([second, first])
+
+        markup = render_category("Sport", tree["Sport"], {"public_base_url": "https://calendar.example"}, {})
+
+        self.assertLess(markup.index("First Team"), markup.index("Second Team"))
+
+
+def make_entry(team_name: str, subgroup_order: int, ics_id: str = "42") -> CalendarEntry:
+    return CalendarEntry(
+        calendar_name=f"Fussball/Deutschland/Bundesliga/{team_name}",
+        country="Deutschland",
+        category="Sport",
+        competition="Bundesliga",
+        api_provider="TheSportsDB",
+        api_key_provider="",
+        ics_id=ics_id,
+        logo_bytes=None,
+        subgroup_order=subgroup_order,
+    )
 
 
 if __name__ == "__main__":

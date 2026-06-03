@@ -13,6 +13,7 @@ from urllib.request import urlopen
 ROOT = Path(__file__).resolve().parents[1]
 MAPPING = ROOT / "data" / "mapping.csv"
 LOCK = ROOT / "data" / "mapping.provider-lock.csv"
+SOURCE = ROOT / "data" / "football_team_source.csv"
 
 EXPECTED_COUNTS = {
     ("Deutschland", "Bundesliga"): 18,
@@ -56,10 +57,18 @@ class MappingContractTests(unittest.TestCase):
             self.assertEqual(row["API-Provider"], "TheSportsDB")
             self.assertEqual(row["API-Key-Provider"], "THESPORTSDB_API_KEY")
             self.assertTrue(row["ICSId"].isdigit(), row["Kalendername"])
+            self.assertTrue(row["SubGroupOrder"].isdigit(), row["Kalendername"])
             self.assertNotIn("/Women/", row["Kalendername"])
 
         self.assertEqual(actual_counts, EXPECTED_COUNTS)
         self.assertEqual(len({row["ICSId"] for row in rows}), len(rows))
+        for group, count in EXPECTED_COUNTS.items():
+            orders = sorted(
+                int(row["SubGroupOrder"])
+                for row in rows
+                if (row["Land"], row["Wettbewerb"]) == group
+            )
+            self.assertEqual(orders, list(range(1, count + 1)), group)
 
     def test_known_problem_ids_are_locked(self) -> None:
         rows = {row["Kalendername"].split("/")[-1]: row for row in load_csv(MAPPING)}
@@ -77,6 +86,17 @@ class MappingContractTests(unittest.TestCase):
             for row in load_csv(MAPPING)
         ]
         self.assertEqual(load_csv(LOCK), mapping_rows)
+
+    def test_source_contains_all_expected_teams_and_orders(self) -> None:
+        source_rows = load_csv(SOURCE)
+        self.assertEqual(len(source_rows), sum(EXPECTED_COUNTS.values()))
+        for group, count in EXPECTED_COUNTS.items():
+            orders = sorted(
+                int(row["SubGroupOrder"])
+                for row in source_rows
+                if (row["Land"], row["Wettbewerb"]) == group
+            )
+            self.assertEqual(orders, list(range(1, count + 1)), group)
 
 
 @unittest.skipUnless(os.environ.get("RUN_LIVE_PROVIDER_TESTS") == "1", "set RUN_LIVE_PROVIDER_TESTS=1")

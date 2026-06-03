@@ -12,8 +12,8 @@ class MappingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "mapping.csv"
             path.write_text(
-                "Kalendername,Land,Kategorie,Wettbewerb,API-Provider,API-Key-Provider,ICSId,LogoBytes\n"
-                "Fussball/Deutschland/Bundesliga/Test Team,Deutschland,Sport,Bundesliga,TheSportsDB,,123,\n",
+                "Kalendername,Land,Kategorie,Wettbewerb,API-Provider,API-Key-Provider,ICSId,LogoBytes,SubGroupOrder\n"
+                "Fussball/Deutschland/Bundesliga/Test Team,Deutschland,Sport,Bundesliga,TheSportsDB,,123,,1\n",
                 encoding="utf-8",
             )
 
@@ -22,6 +22,7 @@ class MappingTests(unittest.TestCase):
         self.assertEqual(len(entries), 1)
         self.assertEqual(entries[0].display_name, "Test Team")
         self.assertEqual(entries[0].group_path, "Fussball/Deutschland/Bundesliga")
+        self.assertEqual(entries[0].subgroup_order, 1)
 
     def test_rejects_missing_required_column(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -35,9 +36,9 @@ class MappingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "mapping.csv"
             path.write_text(
-                "Kalendername,Land,Kategorie,Wettbewerb,API-Provider,API-Key-Provider,ICSId,LogoBytes\n"
-                "A,DE,Sport,Bundesliga,TheSportsDB,,1,\n"
-                "B,DE,Sport,Bundesliga,TheSportsDB,,1,\n",
+                "Kalendername,Land,Kategorie,Wettbewerb,API-Provider,API-Key-Provider,ICSId,LogoBytes,SubGroupOrder\n"
+                "A,DE,Sport,Bundesliga,TheSportsDB,,1,,1\n"
+                "B,DE,Sport,Bundesliga,TheSportsDB,,1,,2\n",
                 encoding="utf-8",
             )
 

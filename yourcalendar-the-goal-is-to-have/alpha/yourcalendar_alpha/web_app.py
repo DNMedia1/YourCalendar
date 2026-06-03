@@ -178,7 +178,10 @@ def render_node_content(
         render_group_tile(category, child, settings, group_logos)
         for child in sorted(node.children.values(), key=lambda item: item.name)
     ]
-    entry_tiles = [render_calendar_tile(entry, settings) for entry in sorted(node.entries, key=lambda item: item.display_name)]
+    entry_tiles = [
+        render_calendar_tile(entry, settings)
+        for entry in sorted(node.entries, key=lambda item: (item.subgroup_order, item.display_name))
+    ]
     if not group_tiles and not entry_tiles:
         return ""
     return f"""

@@ -19,8 +19,8 @@ class WebHttpIntegrationTests(unittest.TestCase):
             data_dir.mkdir()
             ics_dir.mkdir(parents=True)
             (data_dir / "mapping.csv").write_text(
-                "Kalendername,Land,Kategorie,Wettbewerb,API-Provider,API-Key-Provider,ICSId,LogoBytes\n"
-                "Fussball/Deutschland/Bundesliga/Test Team,Deutschland,Sport,Bundesliga,TheSportsDB,,42,\n",
+                "Kalendername,Land,Kategorie,Wettbewerb,API-Provider,API-Key-Provider,ICSId,LogoBytes,SubGroupOrder\n"
+                "Fussball/Deutschland/Bundesliga/Test Team,Deutschland,Sport,Bundesliga,TheSportsDB,,42,,1\n",
                 encoding="utf-8",
             )
             (data_dir / "group_logo_settings.csv").write_text(
