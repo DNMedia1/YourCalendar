@@ -5,6 +5,12 @@ abonnierbare, automatisch aktualisierte ICS-Kalender. Die Alpha ist bewusst klei
 gehalten und nutzt nur Python-Standardbibliothek plus CSV/JSON-Dateien, damit die
 fachliche Idee ohne Framework- oder Infrastrukturbindung pruefbar bleibt.
 
+Ausfuehrliche Produkt-, Mapping-, Provider- und Testdokumentation:
+
+```text
+docs/product-documentation.md
+```
+
 ## 1. Ziel und Nutzen
 
 Das System loest ein wiederkehrendes Kalenderproblem: Viele Kalender sollen auf
