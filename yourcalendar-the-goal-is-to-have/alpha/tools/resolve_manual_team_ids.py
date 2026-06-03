@@ -32,7 +32,7 @@ def main() -> int:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build the static football mapping from the curated team source.")
+    parser = argparse.ArgumentParser(description="Build the static sports mapping from curated team sources.")
     parser.add_argument("--refresh-provider", action="store_true", help="Resolve/verify IDs through the configured provider.")
     parser.add_argument("--update-lock", action="store_true", help="Accept generated provider ID changes and rewrite the lock file.")
     return parser.parse_args()

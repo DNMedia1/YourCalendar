@@ -11,14 +11,18 @@ process reads the mapping, selects the configured API provider for each
 calendar, fetches provider events, renders ICS files, and exposes those files
 through the website.
 
-The current Alpha focuses on football team calendars. The included mapping
-covers 218 team calendars for:
+The current Alpha focuses on sports team calendars. The included mapping covers
+250 team calendars. The football mapping contains 218 team calendars for:
 
 - Germany: 1. Bundesliga, 2. Bundesliga, 3. Bundesliga
 - Spain: La Liga, La Liga 2
 - England: Premier League, Championship
 - France: Ligue 1, Ligue 2
 - Italy: Serie A, Serie B
+
+The American football mapping contains 32 NFL team calendars under:
+
+- United States: Football/NFL
 
 Important domain assumption: the current football mapping intentionally contains
 men's teams. Reserve teams can appear. Women's teams are intentionally excluded
@@ -293,12 +297,33 @@ This file locks manually curated team/provider IDs.
 The manual mapping script compares newly generated lock rows with this file. If
 they differ, the script fails unless `--update-lock` is explicitly passed.
 
-### 5.4 Football Source: `data/football_team_source.csv`
+### 5.4 Sports Sources
 
-This is the curated source for the current football mapping generator.
+The sports mapping generator reads multiple curated source files:
+
+- `data/football_team_source.csv`
+- `data/nfl_team_source.csv`
+
+`data/football_team_source.csv` uses the legacy football defaults. If
+`Kategorie` and `Kalenderpfad` are absent, the generator uses `Sport` and
+`Fussball/<Land>/<Wettbewerb>`.
+
+`data/nfl_team_source.csv` declares `Kategorie` and `Kalenderpfad` explicitly.
+NFL mappings use:
+
+```text
+Kategorie=Sport
+Kalenderpfad=Football/NFL
+Wettbewerb=Football/NFL
+```
+
+The `Football` group is configured with `groupOrder=2` in
+`data/group_logo_settings.csv`.
 
 | Column | Meaning |
 |---|---|
+| `Kategorie` | Optional top-level category. Defaults to `Sport` when omitted. |
+| `Kalenderpfad` | Optional group path before the team name. Defaults to `Fussball/<Land>/<Wettbewerb>` when omitted. |
 | `Land` | Country. |
 | `Wettbewerb` | Competition/league. |
 | `Team` | Team name. |
@@ -322,8 +347,13 @@ a source script or manual CSV workflow.
 7. Set `groupOrder` for any new group path.
 8. Run tests.
 
-For the current football workflow, edit `data/football_team_source.csv` instead
-of editing `data/mapping.csv` manually, then run:
+For the current sports workflow, edit the matching curated source file instead
+of editing `data/mapping.csv` manually:
+
+- football teams: `data/football_team_source.csv`
+- NFL teams: `data/nfl_team_source.csv`
+
+Then run:
 
 ```powershell
 python tools/resolve_manual_team_ids.py
@@ -419,8 +449,9 @@ Avoid live network calls in normal tests. Use injected openers or fakes.
 
 ## 8. Add A New Category Script
 
-Use this when a new category should have its own generated mapping source, like
-football currently does.
+Use this when a new category should have its own generated mapping source. If
+the new category can use the existing sports source format, add a source file to
+`tools/manual_mapping/config.py` instead of creating a separate script.
 
 Recommended structure:
 
@@ -463,9 +494,8 @@ minimum it should contain:
 
 Then define how that source becomes the standard `mapping.csv` columns.
 
-Important: if a new category should not overwrite the football mapping, the
-current single `data/mapping.csv` workflow must be extended to merge multiple
-category sources. That merge workflow is not implemented yet.
+The current sports generator already merges the configured source files into the
+single `data/mapping.csv` output.
 
 ## 9. Current Test Base
 
@@ -548,6 +578,8 @@ verifies:
 - provider lock file matches mapping
 - source file has expected teams and order values
 - group logo settings cover all group paths and define numeric `groupOrder`
+- NFL mappings exist under `Football/NFL`
+- top-level sport groups are ordered with `Fussball=1` and `Football=2`
 
 ### 9.6 Optional Live Provider Test
 
@@ -567,8 +599,8 @@ This test is intentionally slow and network-dependent.
 ## 10. Current Limitations And Assumptions
 
 - The Alpha uses one global `data/mapping.csv`.
-- The current category generation script is football-specific.
-- A multi-category merge workflow is not implemented yet.
+- The current generation script is sports-specific and merges configured sports
+  source files.
 - `ICSId` is both provider ID and local ICS filename stem.
 - TheSportsDB `ICSId` means `idTeam`.
 - External subscriptions require a public HTTPS `public_base_url`.

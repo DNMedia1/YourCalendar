@@ -8,10 +8,6 @@ from .config import THESPORTSDB_BASE_URL
 
 
 def resolve_provider_id(source: dict[str, str]) -> str:
-    provider = source["API-Provider"]
-    if provider != "TheSportsDB":
-        raise RuntimeError(f"No resolver implemented for provider {provider}")
-
     existing_id = source.get("ICSId") or ""
     if existing_id:
         team = lookup_thesportsdb_team(existing_id)

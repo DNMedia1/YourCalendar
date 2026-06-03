@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 
-from .thesportsdb_team_resolver import resolve_provider_id
+from .provider_id_resolver import resolve_provider_id
 
 
 def build_mapping_and_lock_rows(
@@ -45,9 +45,9 @@ def resolve_ics_id(
 
 def build_mapping_row(source: dict[str, str], ics_id: str) -> dict[str, str]:
     return {
-        "Kalendername": f"Fussball/{source['Land']}/{source['Wettbewerb']}/{source['Team']}",
+        "Kalendername": f"{source['Kalenderpfad']}/{source['Team']}",
         "Land": source["Land"],
-        "Kategorie": "Sport",
+        "Kategorie": source["Kategorie"],
         "Wettbewerb": source["Wettbewerb"],
         "API-Provider": source["API-Provider"],
         "API-Key-Provider": source["API-Key-Provider"],

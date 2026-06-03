@@ -53,6 +53,44 @@ class ProviderAndSyncTests(unittest.TestCase):
         self.assertTrue(any("eventsnext.php?id=133664" in call for call in calls))
         self.assertTrue(any("eventslast.php?id=133664" in call for call in calls))
 
+    def test_thesportsdb_maps_nfl_team_events_with_same_provider_contract(self) -> None:
+        payload = {
+            "events": [
+                {
+                    "idEvent": "nfl-9001",
+                    "dateEvent": "2026-09-10",
+                    "strTime": "20:20:00",
+                    "strEvent": "Kansas City Chiefs vs Las Vegas Raiders",
+                    "strHomeTeam": "Kansas City Chiefs",
+                    "strAwayTeam": "Las Vegas Raiders",
+                    "strVenue": "GEHA Field at Arrowhead Stadium",
+                    "strCity": "Kansas City",
+                    "strLeague": "NFL",
+                }
+            ]
+        }
+        calls: list[str] = []
+
+        def opener(url: str, timeout: int = 30) -> FakeResponse:
+            calls.append(url)
+            return FakeResponse(payload)
+
+        provider = TheSportsDBProvider(
+            base_url="https://example.test/api",
+            free_api_key="123",
+            default_duration_minutes=180,
+            opener=opener,
+        )
+        entry = CalendarEntry("Football/NFL/Kansas City Chiefs", "United States", "Sport", "Football/NFL", "TheSportsDB", "", "134931", None, 16)
+
+        events = provider.fetch_events(entry)
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].title, "Kansas City Chiefs vs Las Vegas Raiders")
+        self.assertEqual(events[0].location, "GEHA Field at Arrowhead Stadium, Kansas City")
+        self.assertTrue(any("eventsnext.php?id=134931" in call for call in calls))
+        self.assertTrue(any("eventslast.php?id=134931" in call for call in calls))
+
     def test_sync_writes_ics_and_reports_changes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

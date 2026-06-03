@@ -13,7 +13,8 @@ from urllib.request import urlopen
 ROOT = Path(__file__).resolve().parents[1]
 MAPPING = ROOT / "data" / "mapping.csv"
 LOCK = ROOT / "data" / "mapping.provider-lock.csv"
-SOURCE = ROOT / "data" / "football_team_source.csv"
+FOOTBALL_SOURCE = ROOT / "data" / "football_team_source.csv"
+NFL_SOURCE = ROOT / "data" / "nfl_team_source.csv"
 GROUP_LOGOS = ROOT / "data" / "group_logo_settings.csv"
 
 EXPECTED_COUNTS = {
@@ -28,6 +29,7 @@ EXPECTED_COUNTS = {
     ("Frankreich", "Ligue 2"): 18,
     ("Italien", "Serie A"): 20,
     ("Italien", "Serie B"): 20,
+    ("United States", "Football/NFL"): 32,
 }
 
 KNOWN_PROVIDER_IDS = {
@@ -40,6 +42,10 @@ KNOWN_PROVIDER_IDS = {
     "Paris Saint-Germain": "133714",
     "Saint-\u00c9tienne": "133717",
     "Inter Milan": "133681",
+    "Arizona Cardinals": "134946",
+    "Kansas City Chiefs": "134931",
+    "Tennessee Titans": "134929",
+    "Washington Commanders": "134937",
 }
 
 WOMENS_MARKERS = ("women", "femenino", "female", "frauen")
@@ -89,7 +95,7 @@ class MappingContractTests(unittest.TestCase):
         self.assertEqual(load_csv(LOCK), mapping_rows)
 
     def test_source_contains_all_expected_teams_and_orders(self) -> None:
-        source_rows = load_csv(SOURCE)
+        source_rows = load_csv(FOOTBALL_SOURCE) + load_csv(NFL_SOURCE)
         self.assertEqual(len(source_rows), sum(EXPECTED_COUNTS.values()))
         for group, count in EXPECTED_COUNTS.items():
             orders = sorted(
@@ -113,6 +119,8 @@ class MappingContractTests(unittest.TestCase):
         self.assertEqual(configured_groups, expected_groups)
         for row in group_logo_rows:
             self.assertTrue(row["groupOrder"].isdigit(), row["GroupPath"])
+        self.assertEqual(group_order(group_logo_rows, "Sport", "Fussball"), 1)
+        self.assertEqual(group_order(group_logo_rows, "Sport", "Football"), 2)
 
 
 @unittest.skipUnless(os.environ.get("RUN_LIVE_PROVIDER_TESTS") == "1", "set RUN_LIVE_PROVIDER_TESTS=1")
@@ -131,6 +139,13 @@ class LiveProviderMappingTests(unittest.TestCase):
 def load_csv(path: Path) -> list[dict[str, str]]:
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
         return list(csv.DictReader(handle))
+
+
+def group_order(rows: list[dict[str, str]], category: str, group_path: str) -> int:
+    for row in rows:
+        if row["Kategorie"] == category and row["GroupPath"] == group_path:
+            return int(row["groupOrder"])
+    raise AssertionError(f"Missing group logo row for {category}/{group_path}")
 
 
 def fetch_team(team_id: str) -> dict[str, str] | None:
