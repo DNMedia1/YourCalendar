@@ -3,11 +3,10 @@ from __future__ import annotations
 import tempfile
 import threading
 import unittest
-from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.request import urlopen
 
-from yourcalendar_alpha.web.http_handler import CalendarHttpRequestHandler
+from yourcalendar_alpha.web_app import create_calendar_server
 
 
 class WebHttpIntegrationTests(unittest.TestCase):
@@ -30,18 +29,17 @@ class WebHttpIntegrationTests(unittest.TestCase):
                 "Sport,Fussball/Deutschland/1. Bundesliga,,1\n",
                 encoding="utf-8",
             )
-            (ics_dir / "42.ics").write_text("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n", encoding="utf-8")
-
-            handler = type("TestHandler", (CalendarHttpRequestHandler,), {})
-            handler.settings = {
+            settings = {
                 "_root_dir": str(root),
                 "site_title": "Test Calendar",
                 "mapping_file": "data/mapping.csv",
                 "group_logo_settings_file": "data/group_logo_settings.csv",
                 "ics_output_dir": "public/ics",
                 "public_base_url": "http://127.0.0.1",
+                "host": "127.0.0.1",
+                "port": 0,
             }
-            server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+            server = create_calendar_server(settings)
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
             try:
@@ -91,6 +89,7 @@ class WebHttpIntegrationTests(unittest.TestCase):
                     ics_body = response.read().decode("utf-8")
                 self.assertEqual(content_type, "text/calendar; charset=utf-8")
                 self.assertIn("BEGIN:VCALENDAR", ics_body)
+                self.assertIn("X-WR-CALNAME:Fussball/Deutschland/1. Bundesliga/Test Team", ics_body)
             finally:
                 server.shutdown()
                 server.server_close()
