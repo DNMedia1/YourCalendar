@@ -75,6 +75,13 @@ class WebAppTests(unittest.TestCase):
         self.assertIn("closeDescendantGroups(panel)", JS)
         self.assertIn("child.open = false", JS)
         self.assertIn("grid.classList.add('has-open')", JS)
+        self.assertIn(".brand-block", CSS)
+        self.assertIn(".brand-mark", CSS)
+        self.assertIn('[data-theme="dark"]', CSS)
+        self.assertIn(".theme-toggle", CSS)
+        self.assertIn("data-theme-toggle", JS)
+        self.assertIn("localStorage.setItem('yc-theme'", JS)
+        self.assertIn("aria-pressed", JS)
 
 
 if __name__ == "__main__":

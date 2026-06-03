@@ -90,19 +90,32 @@ def render_index(settings: dict[str, Any]) -> str:
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{title}</title>
+  <script>
+    const savedTheme = localStorage.getItem('yc-theme');
+    const preferredTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = savedTheme || preferredTheme;
+  </script>
   <style>{CSS}</style>
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <div>
-        <p class="product">YourCalendar</p>
-        <h1>{title}</h1>
+      <div class="brand-block">
+        <div class="brand-mark" aria-hidden="true">YC</div>
+        <div>
+          <p class="product">YourCalendar</p>
+          <h1>{title}</h1>
+          <p class="tagline">Automatisch aktualisierte Kalender zum Abonnieren.</p>
+        </div>
       </div>
       <dl class="summary">
         <div><dt>Kategorien</dt><dd>{len(tree)}</dd></div>
         <div><dt>Kalender</dt><dd>{calendar_count}</dd></div>
       </dl>
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Darkmode umschalten" title="Darkmode umschalten">
+        <span class="theme-icon" aria-hidden="true"></span>
+        <span class="theme-label">Darkmode</span>
+      </button>
     </div>
   </header>
   <main class="shell">
@@ -263,6 +276,19 @@ CSS = """
   --surface: #f4f6f8;
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 8px 24px rgba(16, 24, 40, 0.06);
 }
+[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #f8fafc;
+  --muted: #a8b3c4;
+  --line: #334155;
+  --line-soft: #243044;
+  --panel: #111827;
+  --group: #0f172a;
+  --accent: #7dd3fc;
+  --accent-strong: #38bdf8;
+  --surface: #070b12;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 14px 34px rgba(0, 0, 0, 0.28);
+}
 * { box-sizing: border-box; }
 body {
   margin: 0;
@@ -271,13 +297,22 @@ body {
   color: var(--ink);
 }
 .topbar {
-  background: rgba(255, 255, 255, 0.96);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(246, 248, 251, 0.96)),
+    #ffffff;
   border-bottom: 1px solid var(--line);
-  padding: 22px 24px;
+  padding: 18px 24px;
   position: sticky;
   top: 0;
   z-index: 10;
   backdrop-filter: blur(10px);
+  box-shadow: 0 1px 0 rgba(16, 24, 40, 0.04);
+}
+[data-theme="dark"] .topbar {
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(17, 24, 39, 0.94)),
+    #0f172a;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 .topbar-inner {
   width: min(1180px, 100%);
@@ -286,6 +321,29 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+}
+.brand-block {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.brand-mark {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0;
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.16);
+}
+[data-theme="dark"] .brand-mark {
+  background: #e5e7eb;
+  color: #111827;
 }
 .product {
   margin: 0 0 4px;
@@ -298,6 +356,12 @@ body {
   font-size: 26px;
   line-height: 1.15;
 }
+.tagline {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.35;
+}
 .summary {
   display: flex;
   gap: 10px;
@@ -305,10 +369,52 @@ body {
 }
 .summary div {
   min-width: 112px;
-  padding: 10px 12px;
+  padding: 11px 13px;
   border: 1px solid var(--line-soft);
   border-radius: 8px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+[data-theme="dark"] .summary div {
+  background: rgba(17, 24, 39, 0.82);
+}
+.theme-toggle {
+  min-height: 42px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+[data-theme="dark"] .theme-toggle {
+  background: rgba(17, 24, 39, 0.82);
+}
+.theme-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  display: inline-block;
+  position: relative;
+}
+.theme-icon::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  right: -3px;
+  top: -3px;
+  background: var(--surface);
+}
+[data-theme="dark"] .theme-icon::after {
+  display: none;
 }
 .summary dt {
   color: var(--muted);
@@ -418,12 +524,18 @@ body {
   background: #fff;
   flex: 0 0 auto;
 }
+[data-theme="dark"] .logo {
+  background: #0b1220;
+}
 .fallback {
   display: grid;
   place-items: center;
   font-weight: 700;
   color: var(--ink);
   background: #f2f4f7;
+}
+[data-theme="dark"] .fallback {
+  background: #1e293b;
 }
 .tile-copy {
   min-width: 0;
@@ -472,11 +584,17 @@ h3 {
   color: var(--ink);
   border-color: var(--line);
 }
+[data-theme="dark"] .action.secondary,
+[data-theme="dark"] .icon-button {
+  background: #0f172a;
+}
 dialog {
   width: min(520px, calc(100% - 32px));
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 0;
+  background: var(--panel);
+  color: var(--ink);
 }
 dialog::backdrop { background: rgba(17, 24, 39, 0.42); }
 .dialog { padding: 20px; }
@@ -513,9 +631,23 @@ dialog::backdrop { background: rgba(17, 24, 39, 0.42); }
     flex-direction: column;
     gap: 14px;
   }
+  .brand-block {
+    align-items: flex-start;
+  }
+  .brand-mark {
+    width: 42px;
+    height: 42px;
+  }
+  .topbar h1 {
+    font-size: 22px;
+  }
   .summary {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .theme-toggle {
+    justify-content: center;
+    width: 100%;
   }
   .summary div { min-width: 0; }
   .shell {
@@ -545,6 +677,28 @@ const googleLink = document.getElementById('googleLink');
 const outlookLink = document.getElementById('outlookLink');
 const appleLink = document.getElementById('appleLink');
 const icsLink = document.getElementById('icsLink');
+const themeToggle = document.querySelector('[data-theme-toggle]');
+const themeLabel = document.querySelector('.theme-label');
+
+function setTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem('yc-theme', theme);
+  if (themeLabel) {
+    themeLabel.textContent = theme === 'dark' ? 'Lightmode' : 'Darkmode';
+  }
+  if (themeToggle) {
+    themeToggle.setAttribute('aria-pressed', String(theme === 'dark'));
+  }
+}
+
+setTheme(document.documentElement.dataset.theme || 'light');
+
+if (themeToggle) {
+  themeToggle.addEventListener('click', () => {
+    const nextTheme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+  });
+}
 
 document.querySelectorAll('[data-subscribe]').forEach((button) => {
   button.addEventListener('click', () => {
