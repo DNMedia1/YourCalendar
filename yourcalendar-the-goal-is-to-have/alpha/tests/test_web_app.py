@@ -14,7 +14,7 @@ class WebAppTests(unittest.TestCase):
 
         self.assertIn("Sport", tree)
         self.assertIn("Fussball", tree["Sport"].children)
-        bundesliga = tree["Sport"].children["Fussball"].children["Deutschland"].children["Bundesliga"]
+        bundesliga = tree["Sport"].children["Fussball"].children["Deutschland"].children["1. Bundesliga"]
         self.assertEqual(bundesliga.entries[0].display_name, "Test Team")
 
     def test_calendar_public_url_uses_ics_route(self) -> None:
@@ -31,7 +31,7 @@ class WebAppTests(unittest.TestCase):
         self.assertNotIn('class="grid"', markup)
         self.assertNotIn("\u00c2", markup)
         self.assertIn("<details", markup)
-        self.assertIn("Deutschland / Bundesliga", markup)
+        self.assertIn("Deutschland / 1. Bundesliga", markup)
         self.assertIn("Test Team", markup)
 
     def test_render_index_contains_active_tree_behavior(self) -> None:
@@ -64,10 +64,10 @@ class WebAppTests(unittest.TestCase):
 
 def make_entry(team_name: str, subgroup_order: int, ics_id: str = "42") -> CalendarEntry:
     return CalendarEntry(
-        calendar_name=f"Fussball/Deutschland/Bundesliga/{team_name}",
+        calendar_name=f"Fussball/Deutschland/1. Bundesliga/{team_name}",
         country="Deutschland",
         category="Sport",
-        competition="Bundesliga",
+        competition="1. Bundesliga",
         api_provider="TheSportsDB",
         api_key_provider="",
         ics_id=ics_id,

@@ -1,4 +1,4 @@
-# YourCalendar Alpha
+﻿# YourCalendar Alpha
 
 YourCalendar Alpha ist eine eigenstaendige Proof-of-Concept/Alpha-Version fuer
 abonnierbare, automatisch aktualisierte ICS-Kalender. Die Alpha ist bewusst klein
@@ -137,7 +137,7 @@ Beispiel:
 
 ```text
 Kategorie: Sport
-Kalendername: Fussball/Deutschland/Bundesliga/FC Augsburg
+Kalendername: Fussball/Deutschland/1. Bundesliga/FC Augsburg
 ```
 
 Die Website zeigt daraus:
@@ -146,7 +146,7 @@ Die Website zeigt daraus:
 Sport
   Fussball
   Fussball / Deutschland
-  Fussball / Deutschland / Bundesliga
+  Fussball / Deutschland / 1. Bundesliga
     FC Augsburg
 ```
 
@@ -198,7 +198,7 @@ Jede Zeile ist genau ein abonnierbarer Kalender.
 | `Kalendername` | string | ja | Pfad fuer Gruppierung und Anzeigename. Letztes Segment ist der Kalender. |
 | `Land` | string | ja | Fachliches Land des Kalenders. Wird in Kacheln angezeigt. |
 | `Kategorie` | string | ja | Oberste Website-Gruppe, z. B. `Sport`. |
-| `Wettbewerb` | string | ja | Liga/Wettbewerb, z. B. `Bundesliga`. |
+| `Wettbewerb` | string | ja | Liga/Wettbewerb, z. B. `1. Bundesliga`. |
 | `API-Provider` | string | ja | Provider-Schluessel, z. B. `TheSportsDB`. |
 | `API-Key-Provider` | string | nein | Name der Umgebungsvariable fuer Provider-API-Key. |
 | `ICSId` | string | ja | Provider-ID und lokale ICS-Datei-ID. |
@@ -216,7 +216,7 @@ GroupEntry/GroupEntry/KalenderEntry
 Beispiele:
 
 ```csv
-Fussball/Deutschland/Bundesliga/FC Augsburg
+Fussball/Deutschland/1. Bundesliga/FC Augsburg
 Fussball/England/Premier League/Arsenal
 Fussball/Spanien/La Liga 2/Real Sociedad B
 ```
@@ -245,7 +245,7 @@ Beispiel:
 
 ```csv
 Kalendername,Land,Kategorie,Wettbewerb,API-Provider,API-Key-Provider,ICSId,LogoBytes
-Fussball/Deutschland/Bundesliga/FC Augsburg,Deutschland,Sport,Bundesliga,TheSportsDB,THESPORTSDB_API_KEY,133652,,1
+Fussball/Deutschland/1. Bundesliga/FC Augsburg,Deutschland,Sport,1. Bundesliga,TheSportsDB,THESPORTSDB_API_KEY,133652,,1
 ```
 
 ### 7.4 Fehler, die vermieden werden muessen
@@ -307,7 +307,7 @@ Aktuelles Format:
 | Spalte | Bedeutung |
 |---|---|
 | `Kategorie` | Kategorie, z. B. `Sport`. |
-| `GroupPath` | Pfad innerhalb der Kategorie, z. B. `Fussball/Deutschland/Bundesliga`. |
+| `GroupPath` | Pfad innerhalb der Kategorie, z. B. `Fussball/Deutschland/1. Bundesliga`. |
 | `LogoBytes` | Base64-kodierte Bilddaten. |
 
 Die endgueltige fachliche Definition dieser Datei ist noch offen. Die Alpha kann

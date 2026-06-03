@@ -1,22 +1,22 @@
 Land,Wettbewerb,Team,SubGroupOrder,API-Provider,API-Key-Provider,ICSId
-Deutschland,Bundesliga,FC Augsburg,1,TheSportsDB,THESPORTSDB_API_KEY,133652
-Deutschland,Bundesliga,Union Berlin,2,TheSportsDB,THESPORTSDB_API_KEY,134690
-Deutschland,Bundesliga,Werder Bremen,3,TheSportsDB,THESPORTSDB_API_KEY,133662
-Deutschland,Bundesliga,Borussia Dortmund,4,TheSportsDB,THESPORTSDB_API_KEY,133650
-Deutschland,Bundesliga,Eintracht Frankfurt,5,TheSportsDB,THESPORTSDB_API_KEY,133814
-Deutschland,Bundesliga,SC Freiburg,6,TheSportsDB,THESPORTSDB_API_KEY,133653
-Deutschland,Bundesliga,Hamburger SV,7,TheSportsDB,THESPORTSDB_API_KEY,155605
-Deutschland,Bundesliga,1. FC Heidenheim,8,TheSportsDB,THESPORTSDB_API_KEY,134696
-Deutschland,Bundesliga,TSG Hoffenheim,9,TheSportsDB,THESPORTSDB_API_KEY,133657
-Deutschland,Bundesliga,1. FC Köln,10,TheSportsDB,THESPORTSDB_API_KEY,133654
-Deutschland,Bundesliga,RB Leipzig,11,TheSportsDB,THESPORTSDB_API_KEY,134695
-Deutschland,Bundesliga,Bayer Leverkusen,12,TheSportsDB,THESPORTSDB_API_KEY,133666
-Deutschland,Bundesliga,Mainz 05,13,TheSportsDB,THESPORTSDB_API_KEY,133665
-Deutschland,Bundesliga,Borussia Mönchengladbach,14,TheSportsDB,THESPORTSDB_API_KEY,134779
-Deutschland,Bundesliga,Bayern Munich,15,TheSportsDB,THESPORTSDB_API_KEY,133664
-Deutschland,Bundesliga,FC St. Pauli,16,TheSportsDB,THESPORTSDB_API_KEY,133813
-Deutschland,Bundesliga,VfB Stuttgart,17,TheSportsDB,THESPORTSDB_API_KEY,133660
-Deutschland,Bundesliga,VfL Wolfsburg,18,TheSportsDB,THESPORTSDB_API_KEY,133655
+Deutschland,1. Bundesliga,FC Augsburg,1,TheSportsDB,THESPORTSDB_API_KEY,133652
+Deutschland,1. Bundesliga,Union Berlin,2,TheSportsDB,THESPORTSDB_API_KEY,134690
+Deutschland,1. Bundesliga,Werder Bremen,3,TheSportsDB,THESPORTSDB_API_KEY,133662
+Deutschland,1. Bundesliga,Borussia Dortmund,4,TheSportsDB,THESPORTSDB_API_KEY,133650
+Deutschland,1. Bundesliga,Eintracht Frankfurt,5,TheSportsDB,THESPORTSDB_API_KEY,133814
+Deutschland,1. Bundesliga,SC Freiburg,6,TheSportsDB,THESPORTSDB_API_KEY,133653
+Deutschland,1. Bundesliga,Hamburger SV,7,TheSportsDB,THESPORTSDB_API_KEY,155605
+Deutschland,1. Bundesliga,1. FC Heidenheim,8,TheSportsDB,THESPORTSDB_API_KEY,134696
+Deutschland,1. Bundesliga,TSG Hoffenheim,9,TheSportsDB,THESPORTSDB_API_KEY,133657
+Deutschland,1. Bundesliga,1. FC Köln,10,TheSportsDB,THESPORTSDB_API_KEY,133654
+Deutschland,1. Bundesliga,RB Leipzig,11,TheSportsDB,THESPORTSDB_API_KEY,134695
+Deutschland,1. Bundesliga,Bayer Leverkusen,12,TheSportsDB,THESPORTSDB_API_KEY,133666
+Deutschland,1. Bundesliga,Mainz 05,13,TheSportsDB,THESPORTSDB_API_KEY,133665
+Deutschland,1. Bundesliga,Borussia Mönchengladbach,14,TheSportsDB,THESPORTSDB_API_KEY,134779
+Deutschland,1. Bundesliga,Bayern Munich,15,TheSportsDB,THESPORTSDB_API_KEY,133664
+Deutschland,1. Bundesliga,FC St. Pauli,16,TheSportsDB,THESPORTSDB_API_KEY,133813
+Deutschland,1. Bundesliga,VfB Stuttgart,17,TheSportsDB,THESPORTSDB_API_KEY,133660
+Deutschland,1. Bundesliga,VfL Wolfsburg,18,TheSportsDB,THESPORTSDB_API_KEY,133655
 Deutschland,2. Bundesliga,Arminia Bielefeld,1,TheSportsDB,THESPORTSDB_API_KEY,133852
 Deutschland,2. Bundesliga,VfL Bochum,2,TheSportsDB,THESPORTSDB_API_KEY,133839
 Deutschland,2. Bundesliga,Darmstadt 98,3,TheSportsDB,THESPORTSDB_API_KEY,134693

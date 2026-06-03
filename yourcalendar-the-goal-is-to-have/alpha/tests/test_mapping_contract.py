@@ -16,7 +16,7 @@ LOCK = ROOT / "data" / "mapping.provider-lock.csv"
 SOURCE = ROOT / "data" / "football_team_source.csv"
 
 EXPECTED_COUNTS = {
-    ("Deutschland", "Bundesliga"): 18,
+    ("Deutschland", "1. Bundesliga"): 18,
     ("Deutschland", "2. Bundesliga"): 18,
     ("Deutschland", "3. Bundesliga"): 20,
     ("Spanien", "La Liga"): 20,

@@ -20,14 +20,14 @@ class WebHttpIntegrationTests(unittest.TestCase):
             ics_dir.mkdir(parents=True)
             (data_dir / "mapping.csv").write_text(
                 "Kalendername,Land,Kategorie,Wettbewerb,API-Provider,API-Key-Provider,ICSId,LogoBytes,SubGroupOrder\n"
-                "Fussball/Deutschland/Bundesliga/Test Team,Deutschland,Sport,Bundesliga,TheSportsDB,,42,,1\n",
+                "Fussball/Deutschland/1. Bundesliga/Test Team,Deutschland,Sport,1. Bundesliga,TheSportsDB,,42,,1\n",
                 encoding="utf-8",
             )
             (data_dir / "group_logo_settings.csv").write_text(
                 "Kategorie,GroupPath,LogoBytes\n"
                 "Sport,Fussball,\n"
                 "Sport,Fussball/Deutschland,\n"
-                "Sport,Fussball/Deutschland/Bundesliga,\n",
+                "Sport,Fussball/Deutschland/1. Bundesliga,\n",
                 encoding="utf-8",
             )
             (ics_dir / "42.ics").write_text("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n", encoding="utf-8")
@@ -49,7 +49,7 @@ class WebHttpIntegrationTests(unittest.TestCase):
                 with urlopen(base_url, timeout=10) as response:
                     html = response.read().decode("utf-8")
                 self.assertIn("Test Team", html)
-                self.assertIn("Fussball / Deutschland / Bundesliga", html)
+                self.assertIn("Fussball / Deutschland / 1. Bundesliga", html)
                 self.assertIn("<details", html)
                 self.assertIn("<summary", html)
                 self.assertIn("Google Calendar", html)

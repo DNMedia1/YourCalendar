@@ -63,7 +63,7 @@ class ProviderAndSyncTests(unittest.TestCase):
             default_duration_minutes=120,
             opener=opener,
         )
-        entry = CalendarEntry("Fussball/DE/Bundesliga/Team", "DE", "Sport", "Bundesliga", "TheSportsDB", "", "133664", None, 1)
+        entry = CalendarEntry("Fussball/DE/1. Bundesliga/Team", "DE", "Sport", "1. Bundesliga", "TheSportsDB", "", "133664", None, 1)
 
         events = provider.fetch_events(entry)
 
@@ -81,7 +81,7 @@ class ProviderAndSyncTests(unittest.TestCase):
             data_dir.mkdir()
             (data_dir / "mapping.csv").write_text(
                 "Kalendername,Land,Kategorie,Wettbewerb,API-Provider,API-Key-Provider,ICSId,LogoBytes,SubGroupOrder\n"
-                "Fussball/Deutschland/Bundesliga/Test Team,Deutschland,Sport,Bundesliga,TheSportsDB,,42,,1\n",
+                "Fussball/Deutschland/1. Bundesliga/Test Team,Deutschland,Sport,1. Bundesliga,TheSportsDB,,42,,1\n",
                 encoding="utf-8",
             )
             settings = {
