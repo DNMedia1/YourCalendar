@@ -61,12 +61,52 @@ alpha/
     ics/
   tests/
   tools/
+    manual_mapping/
+      builder.py
+      config.py
+      csv_table.py
+      provider_lock_diff.py
+      team_source_loader.py
+      thesportsdb_team_resolver.py
     resolve_manual_team_ids.py
   yourcalendar_alpha/
-    mapping.py
-    providers.py
-    sync.py
-    ics.py
+    calendar/
+      file_naming.py
+      subscription_links.py
+      tree_builder.py
+    config/
+      settings.py
+    domain/
+      calendar_entry.py
+      calendar_event.py
+      calendar_tree_node.py
+      group_logo.py
+      sync_result.py
+    ics/
+      line_formatter.py
+      parser.py
+      renderer.py
+      sequence.py
+    mapping/
+      loader.py
+    models.py
+    providers/
+      base.py
+      errors.py
+      registry.py
+      thesportsdb_datetime.py
+      thesportsdb_event_mapper.py
+      thesportsdb_provider.py
+    sync/
+      change_counter.py
+      report.py
+      service.py
+    web/
+      static/
+        site.css
+        site.js
+      http_handler.py
+      page_renderer.py
     web_app.py
     update_calendars.py
     scheduler_loop.py
@@ -124,8 +164,27 @@ Pflichtspalten, prueft leere Pflichtwerte und verhindert doppelte `ICSId`-Werte.
 
 ### 6.2 Website darstellen
 
-`yourcalendar_alpha.web_app.render_index()` liest Mapping und GroupLogoSettings,
-baut daraus eine Baumstruktur und rendert daraus HTML.
+`yourcalendar_alpha.page_renderer.render_home_page()` liest Mapping und
+GroupLogoSettings, baut daraus eine Baumstruktur und rendert daraus HTML.
+
+Die Website-Verantwortung ist in der Alpha bewusst getrennt:
+
+- `domain/`: einzelne Datenklassen fuer Kalender, Events, Gruppen und Sync-Ergebnisse.
+- `models.py`: Re-Export der Datenklassen fuer bequeme Imports.
+- `calendar/`: Baumaufbau, Zaehlung, Sortierung, Dateinamen und abonnierbare Kalender-URLs.
+- `mapping/`: CSV-Loader und Mapping-/GroupLogoSettings-Validierung.
+- `web/page_renderer.py`: HTML-Rendering.
+- `web/http_handler.py`: HTTP-Routen fuer HTML, ICS und statische Assets.
+- `web_app.py`: Serverstart und Server-Factory.
+- `web/static/site.css`: visuelles Design.
+- `web/static/site.js`: Browser-Interaktion, Darkmode und Tree-Verhalten.
+
+Weitere Verantwortlichkeiten sind ebenfalls getrennt:
+
+- `ics/`: ICS-Ausgabe, bestehende Event-Sequenzen und Formatierungsregeln.
+- `providers/`: generischer Provider-Vertrag, Fehler, Registrierung und konkrete TheSportsDB-Anbindung.
+- `sync/`: Synchronisationsfluss, Change-Zaehler und CLI-Ausgabe.
+- `config/`: Settings laden und Pfade aufloesen.
 
 Die Darstellung folgt dieser Regel:
 
@@ -341,7 +400,8 @@ TheSportsDB-Regel:
 
 ## 11. Neuen Provider implementieren
 
-Ein neuer Provider muss den generischen Vertrag in `providers.py` erfuellen:
+Ein neuer Provider muss den generischen Vertrag in
+`yourcalendar_alpha/providers/base.py` erfuellen:
 
 ```python
 class CalendarProvider:
@@ -353,13 +413,13 @@ class CalendarProvider:
 
 ### 11.1 Vorgehen
 
-1. Neue Provider-Klasse in `yourcalendar_alpha/providers.py` anlegen.
+1. Neue Provider-Klasse in `yourcalendar_alpha/providers/` anlegen.
 2. `name` auf den Mapping-Schluessel setzen, z. B. `ExampleSports`.
 3. `fetch_events(entry)` implementieren.
 4. Provider-spezifische API-ID aus `entry.ics_id` lesen.
 5. Optionalen API-Key ueber `entry.api_key_provider` aus Umgebungsvariablen lesen.
 6. Providerdaten in `CalendarEvent` umwandeln.
-7. Provider in `build_provider_registry(settings)` registrieren.
+7. Provider in `yourcalendar_alpha/providers/registry.py` registrieren.
 8. Unit-Test fuer Provider-Mapping ergaenzen.
 9. Integrationstest fuer Sync mit Fake-Provider oder gemocktem HTTP ergaenzen.
 10. Mapping-Zeile mit `API-Provider=<ProviderName>` ergaenzen.

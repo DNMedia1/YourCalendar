@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-from .settings import load_settings
-from .sync import sync_all
+from .config.settings import load_settings
+from .sync.report import format_sync_result
+from .sync.service import sync_all_calendars
 
 
 def main() -> int:
     settings = load_settings()
-    results = sync_all(settings)
+    results = sync_all_calendars(settings)
     for result in results:
-        print(
-            f"{result.calendar_id}: created={result.created} "
-            f"updated={result.updated} deleted={result.deleted} -> {result.written_path}"
-        )
+        print(format_sync_result(result))
     return 0
 
 

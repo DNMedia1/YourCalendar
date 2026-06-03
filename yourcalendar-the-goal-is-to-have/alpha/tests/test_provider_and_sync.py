@@ -1,37 +1,16 @@
 from __future__ import annotations
 
-import json
 import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
-from yourcalendar_alpha.ics import CalendarEvent
-from yourcalendar_alpha.mapping import CalendarEntry
-from yourcalendar_alpha.providers import TheSportsDBProvider
-from yourcalendar_alpha.sync import sync_all
-
-
-class FakeResponse:
-    def __init__(self, payload: dict) -> None:
-        self.payload = payload
-
-    def __enter__(self) -> "FakeResponse":
-        return self
-
-    def __exit__(self, *args: object) -> None:
-        return None
-
-    def read(self) -> bytes:
-        return json.dumps(self.payload).encode("utf-8")
-
-
-class StaticProvider:
-    def __init__(self, events: list[CalendarEvent]) -> None:
-        self.events = events
-
-    def fetch_events(self, entry: CalendarEntry) -> list[CalendarEvent]:
-        return self.events
+from fake_response import FakeResponse
+from static_provider import StaticProvider
+from yourcalendar_alpha.domain.calendar_entry import CalendarEntry
+from yourcalendar_alpha.domain.calendar_event import CalendarEvent
+from yourcalendar_alpha.providers.thesportsdb_provider import TheSportsDBProvider
+from yourcalendar_alpha.sync.service import sync_all_calendars
 
 
 class ProviderAndSyncTests(unittest.TestCase):
@@ -101,8 +80,8 @@ class ProviderAndSyncTests(unittest.TestCase):
                 )
             ]
 
-            first = sync_all(settings, {"TheSportsDB": StaticProvider(events)})
-            second = sync_all(settings, {"TheSportsDB": StaticProvider(events)})
+            first = sync_all_calendars(settings, {"TheSportsDB": StaticProvider(events)})
+            second = sync_all_calendars(settings, {"TheSportsDB": StaticProvider(events)})
 
             ics_path = root / "public" / "ics" / "42.ics"
             self.assertTrue(ics_path.exists())

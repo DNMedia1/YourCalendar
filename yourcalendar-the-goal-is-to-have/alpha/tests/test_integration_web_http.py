@@ -7,7 +7,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.request import urlopen
 
-from yourcalendar_alpha.web_app import CalendarRequestHandler
+from yourcalendar_alpha.web.http_handler import CalendarHttpRequestHandler
 
 
 class WebHttpIntegrationTests(unittest.TestCase):
@@ -32,7 +32,7 @@ class WebHttpIntegrationTests(unittest.TestCase):
             )
             (ics_dir / "42.ics").write_text("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n", encoding="utf-8")
 
-            handler = type("TestHandler", (CalendarRequestHandler,), {})
+            handler = type("TestHandler", (CalendarHttpRequestHandler,), {})
             handler.settings = {
                 "_root_dir": str(root),
                 "site_title": "Test Calendar",
@@ -56,6 +56,20 @@ class WebHttpIntegrationTests(unittest.TestCase):
                 self.assertIn("Outlook", html)
                 self.assertIn("Apple Calendar", html)
                 self.assertIn("ICS-Datei", html)
+                self.assertIn('/static/site.css', html)
+                self.assertIn('/static/site.js', html)
+
+                with urlopen(f"{base_url}/static/site.css", timeout=10) as response:
+                    content_type = response.headers["Content-Type"]
+                    css_body = response.read().decode("utf-8")
+                self.assertEqual(content_type, "text/css; charset=utf-8")
+                self.assertIn(".topbar", css_body)
+
+                with urlopen(f"{base_url}/static/site.js", timeout=10) as response:
+                    content_type = response.headers["Content-Type"]
+                    js_body = response.read().decode("utf-8")
+                self.assertEqual(content_type, "text/javascript; charset=utf-8")
+                self.assertIn("data-theme-toggle", js_body)
 
                 with urlopen(f"{base_url}/ics/42.ics", timeout=10) as response:
                     content_type = response.headers["Content-Type"]
