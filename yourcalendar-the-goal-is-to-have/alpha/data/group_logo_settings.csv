@@ -1,18 +1,18 @@
-Kategorie,GroupPath,LogoBytes
-Sport,Fussball,
-Sport,Fussball/Deutschland,
-Sport,Fussball/Deutschland/1. Bundesliga,
-Sport,Fussball/Deutschland/2. Bundesliga,
-Sport,Fussball/Deutschland/3. Bundesliga,
-Sport,Fussball/Spanien,
-Sport,Fussball/Spanien/La Liga,
-Sport,Fussball/Spanien/La Liga 2,
-Sport,Fussball/England,
-Sport,Fussball/England/Premier League,
-Sport,Fussball/England/Championship,
-Sport,Fussball/Frankreich,
-Sport,Fussball/Frankreich/Ligue 1,
-Sport,Fussball/Frankreich/Ligue 2,
-Sport,Fussball/Italien,
-Sport,Fussball/Italien/Serie A,
-Sport,Fussball/Italien/Serie B,
+Kategorie,GroupPath,LogoBytes,groupOrder
+Sport,Fussball,,1
+Sport,Fussball/Deutschland,,1
+Sport,Fussball/Deutschland/1. Bundesliga,,1
+Sport,Fussball/Deutschland/2. Bundesliga,,2
+Sport,Fussball/Deutschland/3. Bundesliga,,3
+Sport,Fussball/England,,2
+Sport,Fussball/England/Premier League,,1
+Sport,Fussball/England/Championship,,2
+Sport,Fussball/Spanien,,3
+Sport,Fussball/Spanien/La Liga,,1
+Sport,Fussball/Spanien/La Liga 2,,2
+Sport,Fussball/Frankreich,,4
+Sport,Fussball/Frankreich/Ligue 1,,1
+Sport,Fussball/Frankreich/Ligue 2,,2
+Sport,Fussball/Italien,,5
+Sport,Fussball/Italien/Serie A,,1
+Sport,Fussball/Italien/Serie B,,2

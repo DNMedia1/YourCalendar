@@ -238,13 +238,13 @@ Eine kontextfremde Person kann einen neuen Eintrag so hinzufuegen:
 4. `SubGroupOrder` innerhalb derselben Liga/Untergruppe eindeutig setzen.
 5. `data/mapping.provider-lock.csv` um Team, ICSId und Provider erweitern.
 6. `python tools/resolve_manual_team_ids.py` ausfuehren, um `data/mapping.csv` neu zu erstellen.
-7. Bei Bedarf passenden Gruppenpfad in `data/group_logo_settings.csv` ergaenzen.
+7. Bei Bedarf passenden Gruppenpfad in `data/group_logo_settings.csv` ergaenzen und `groupOrder` setzen.
 8. Tests ausfuehren.
 
 Beispiel:
 
 ```csv
-Kalendername,Land,Kategorie,Wettbewerb,API-Provider,API-Key-Provider,ICSId,LogoBytes
+Kalendername,Land,Kategorie,Wettbewerb,API-Provider,API-Key-Provider,ICSId,LogoBytes,SubGroupOrder
 Fussball/Deutschland/1. Bundesliga/FC Augsburg,Deutschland,Sport,1. Bundesliga,TheSportsDB,THESPORTSDB_API_KEY,133652,,1
 ```
 
@@ -309,6 +309,10 @@ Aktuelles Format:
 | `Kategorie` | Kategorie, z. B. `Sport`. |
 | `GroupPath` | Pfad innerhalb der Kategorie, z. B. `Fussball/Deutschland/1. Bundesliga`. |
 | `LogoBytes` | Base64-kodierte Bilddaten. |
+| `groupOrder` | Integer fuer die Reihenfolge von Gruppenkacheln innerhalb derselben Ebene. |
+
+`groupOrder` sortiert nur GroupEntries. KalenderEntries innerhalb einer Gruppe
+werden weiterhin ueber `SubGroupOrder` aus `data/mapping.csv` sortiert.
 
 Die endgueltige fachliche Definition dieser Datei ist noch offen. Die Alpha kann
 sie bereits laden und fuer GroupEntries nutzen.

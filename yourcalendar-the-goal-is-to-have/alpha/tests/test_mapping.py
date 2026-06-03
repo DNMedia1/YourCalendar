@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from yourcalendar_alpha.mapping import load_mapping
+from yourcalendar_alpha.mapping import load_group_logos, load_mapping
 
 
 class MappingTests(unittest.TestCase):
@@ -44,6 +44,46 @@ class MappingTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "Duplicate ICSId"):
                 load_mapping(path)
+
+    def test_loads_group_logos_with_group_order(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "group_logo_settings.csv"
+            path.write_text(
+                "Kategorie,GroupPath,LogoBytes,groupOrder\n"
+                "Sport,Fussball/Deutschland,,2\n",
+                encoding="utf-8",
+            )
+
+            logos = load_group_logos(path)
+
+        logo = logos[("Sport", "Fussball/Deutschland")]
+        self.assertEqual(logo.group_order, 2)
+
+    def test_loads_group_logos_with_legacy_group_order_casing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "group_logo_settings.csv"
+            path.write_text(
+                "Kategorie,GroupPath,LogoBytes,GroupOrder\n"
+                "Sport,Fussball/Deutschland,,3\n",
+                encoding="utf-8",
+            )
+
+            logos = load_group_logos(path)
+
+        logo = logos[("Sport", "Fussball/Deutschland")]
+        self.assertEqual(logo.group_order, 3)
+
+    def test_rejects_invalid_group_order(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "group_logo_settings.csv"
+            path.write_text(
+                "Kategorie,GroupPath,LogoBytes,groupOrder\n"
+                "Sport,Fussball/Deutschland,,abc\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, "invalid groupOrder"):
+                load_group_logos(path)
 
 
 if __name__ == "__main__":

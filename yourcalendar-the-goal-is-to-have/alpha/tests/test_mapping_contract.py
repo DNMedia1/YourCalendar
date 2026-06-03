@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MAPPING = ROOT / "data" / "mapping.csv"
 LOCK = ROOT / "data" / "mapping.provider-lock.csv"
 SOURCE = ROOT / "data" / "football_team_source.csv"
+GROUP_LOGOS = ROOT / "data" / "group_logo_settings.csv"
 
 EXPECTED_COUNTS = {
     ("Deutschland", "1. Bundesliga"): 18,
@@ -97,6 +98,21 @@ class MappingContractTests(unittest.TestCase):
                 if (row["Land"], row["Wettbewerb"]) == group
             )
             self.assertEqual(orders, list(range(1, count + 1)), group)
+
+    def test_group_logo_settings_cover_mapping_groups_and_define_order(self) -> None:
+        mapping_rows = load_csv(MAPPING)
+        group_logo_rows = load_csv(GROUP_LOGOS)
+        configured_groups = {(row["Kategorie"], row["GroupPath"]) for row in group_logo_rows}
+        expected_groups: set[tuple[str, str]] = set()
+
+        for row in mapping_rows:
+            path_parts = [part for part in row["Kalendername"].split("/") if part]
+            for index in range(1, len(path_parts)):
+                expected_groups.add((row["Kategorie"], "/".join(path_parts[:index])))
+
+        self.assertEqual(configured_groups, expected_groups)
+        for row in group_logo_rows:
+            self.assertTrue(row["groupOrder"].isdigit(), row["GroupPath"])
 
 
 @unittest.skipUnless(os.environ.get("RUN_LIVE_PROVIDER_TESTS") == "1", "set RUN_LIVE_PROVIDER_TESTS=1")

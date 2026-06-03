@@ -24,10 +24,10 @@ class WebHttpIntegrationTests(unittest.TestCase):
                 encoding="utf-8",
             )
             (data_dir / "group_logo_settings.csv").write_text(
-                "Kategorie,GroupPath,LogoBytes\n"
-                "Sport,Fussball,\n"
-                "Sport,Fussball/Deutschland,\n"
-                "Sport,Fussball/Deutschland/1. Bundesliga,\n",
+                "Kategorie,GroupPath,LogoBytes,groupOrder\n"
+                "Sport,Fussball,,1\n"
+                "Sport,Fussball/Deutschland,,1\n"
+                "Sport,Fussball/Deutschland/1. Bundesliga,,1\n",
                 encoding="utf-8",
             )
             (ics_dir / "42.ics").write_text("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n", encoding="utf-8")

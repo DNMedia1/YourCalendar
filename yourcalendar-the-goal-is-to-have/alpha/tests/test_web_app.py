@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from yourcalendar_alpha.mapping import CalendarEntry
+from yourcalendar_alpha.mapping import CalendarEntry, GroupLogo
 from yourcalendar_alpha.web_app import CSS, JS, build_tree, calendar_public_url, render_category
 
 
@@ -61,13 +61,42 @@ class WebAppTests(unittest.TestCase):
 
         self.assertLess(markup.index("First Team"), markup.index("Second Team"))
 
+    def test_group_tiles_are_sorted_by_group_logo_order(self) -> None:
+        spain = make_custom_entry("Fussball/Spanien/La Liga/Test Spanien", "Spanien", "La Liga", "1")
+        england = make_custom_entry("Fussball/England/Premier League/Test England", "England", "Premier League", "2")
+        tree = build_tree([spain, england])
+        group_logos = {
+            ("Sport", "Fussball/Spanien"): GroupLogo("Sport", "Fussball/Spanien", None, 2),
+            ("Sport", "Fussball/England"): GroupLogo("Sport", "Fussball/England", None, 1),
+        }
+
+        markup = render_category("Sport", tree["Sport"], {"public_base_url": "https://calendar.example"}, group_logos)
+
+        self.assertLess(markup.index("Fussball / England"), markup.index("Fussball / Spanien"))
+
 
 def make_entry(team_name: str, subgroup_order: int, ics_id: str = "42") -> CalendarEntry:
-    return CalendarEntry(
+    return make_custom_entry(
         calendar_name=f"Fussball/Deutschland/1. Bundesliga/{team_name}",
         country="Deutschland",
-        category="Sport",
         competition="1. Bundesliga",
+        ics_id=ics_id,
+        subgroup_order=subgroup_order,
+    )
+
+
+def make_custom_entry(
+    calendar_name: str,
+    country: str,
+    competition: str,
+    ics_id: str,
+    subgroup_order: int = 1,
+) -> CalendarEntry:
+    return CalendarEntry(
+        calendar_name=calendar_name,
+        country=country,
+        category="Sport",
+        competition=competition,
         api_provider="TheSportsDB",
         api_key_provider="",
         ics_id=ics_id,

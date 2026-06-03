@@ -176,7 +176,7 @@ def render_node_content(
 ) -> str:
     group_tiles = [
         render_group_tile(category, child, settings, group_logos)
-        for child in sorted(node.children.values(), key=lambda item: item.name)
+        for child in sorted(node.children.values(), key=lambda item: group_sort_key(category, item, group_logos))
     ]
     entry_tiles = [
         render_calendar_tile(entry, settings)
@@ -186,6 +186,16 @@ def render_node_content(
         return ""
     return f"""
 <div class="tile-grid" style="--level: {node.depth}">{"".join(group_tiles)}{"".join(entry_tiles)}</div>"""
+
+
+def group_sort_key(
+    category: str,
+    node: TreeNode,
+    group_logos: dict[tuple[str, str], GroupLogo],
+) -> tuple[int, str]:
+    logo = group_logos.get((category, node.path))
+    order = logo.group_order if logo else 999_999
+    return order, node.name
 
 
 def render_group_tile(

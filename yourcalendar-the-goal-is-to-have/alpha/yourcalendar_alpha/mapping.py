@@ -50,6 +50,7 @@ class GroupLogo:
     category: str
     group_path: str
     logo_bytes: bytes | None
+    group_order: int
 
 
 def _decode_logo(raw_value: str, row_number: int, column_name: str) -> bytes | None:
@@ -115,8 +116,10 @@ def load_group_logos(path: str | Path) -> dict[tuple[str, str], GroupLogo]:
         return {}
     with logo_path.open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
-        required = {"Kategorie", "GroupPath", "LogoBytes"}
-        missing = sorted(required.difference(reader.fieldnames or []))
+        fieldnames = set(reader.fieldnames or [])
+        group_order_column = "groupOrder" if "groupOrder" in fieldnames else "GroupOrder"
+        required = {"Kategorie", "GroupPath", "LogoBytes", group_order_column}
+        missing = sorted(required.difference(fieldnames))
         if missing:
             raise ValueError(f"Group logo settings file is missing columns: {', '.join(missing)}")
         logos: dict[tuple[str, str], GroupLogo] = {}
@@ -125,9 +128,14 @@ def load_group_logos(path: str | Path) -> dict[tuple[str, str], GroupLogo]:
             group_path = (row.get("GroupPath") or "").strip()
             if not category or not group_path:
                 raise ValueError(f"Group logo row {row_number} needs Kategorie and GroupPath")
+            try:
+                group_order = int((row.get(group_order_column) or "").strip())
+            except ValueError as exc:
+                raise ValueError(f"Group logo row {row_number} has invalid groupOrder") from exc
             logos[(category, group_path)] = GroupLogo(
                 category=category,
                 group_path=group_path,
                 logo_bytes=_decode_logo(row.get("LogoBytes") or "", row_number, "LogoBytes"),
+                group_order=group_order,
             )
     return logos
