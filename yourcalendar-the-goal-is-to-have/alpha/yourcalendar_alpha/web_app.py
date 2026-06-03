@@ -342,6 +342,10 @@ body {
   align-items: stretch;
   margin-bottom: 18px;
 }
+.tile-grid.has-open > .group-panel:not([open]),
+.tile-grid.has-open > .calendar-tile {
+  display: none;
+}
 .tile {
   min-height: 166px;
   border: 1px solid var(--line-soft);
@@ -553,6 +557,40 @@ document.querySelectorAll('[data-subscribe]').forEach((button) => {
     dialog.showModal();
   });
 });
+
+document.querySelectorAll('.group-panel').forEach((panel) => {
+  panel.addEventListener('toggle', () => {
+    const grid = panel.parentElement;
+    if (!grid || !grid.classList.contains('tile-grid')) {
+      return;
+    }
+    if (panel.open) {
+      grid.querySelectorAll(':scope > .group-panel[open]').forEach((sibling) => {
+        if (sibling !== panel) {
+          closeGroupTree(sibling);
+        }
+      });
+      grid.classList.add('has-open');
+    } else if (!grid.querySelector(':scope > .group-panel[open]')) {
+      closeDescendantGroups(panel);
+      grid.classList.remove('has-open');
+    }
+  });
+});
+
+function closeGroupTree(panel) {
+  closeDescendantGroups(panel);
+  panel.open = false;
+}
+
+function closeDescendantGroups(panel) {
+  panel.querySelectorAll('.group-panel[open]').forEach((child) => {
+    child.open = false;
+  });
+  panel.querySelectorAll('.tile-grid.has-open').forEach((grid) => {
+    grid.classList.remove('has-open');
+  });
+}
 """
 
 
