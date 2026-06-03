@@ -7,7 +7,7 @@ from yourcalendar_alpha.calendar.subscription_links import build_calendar_public
 from yourcalendar_alpha.calendar.tree_builder import build_calendar_tree
 from yourcalendar_alpha.domain.calendar_entry import CalendarEntry
 from yourcalendar_alpha.domain.group_logo import GroupLogo
-from yourcalendar_alpha.web.page_renderer import render_category_section
+from yourcalendar_alpha.web.page_renderer import render_category_section, render_footer, render_static_page
 
 
 STATIC_DIR = Path(__file__).resolve().parents[1] / "yourcalendar_alpha" / "web" / "static"
@@ -57,9 +57,32 @@ class WebAppTests(unittest.TestCase):
         self.assertIn(".brand-mark", css)
         self.assertIn('[data-theme="dark"]', css)
         self.assertIn(".theme-toggle", css)
+        self.assertIn(".site-footer", css)
         self.assertIn("data-theme-toggle", js)
         self.assertIn("localStorage.setItem('yc-theme'", js)
         self.assertIn("aria-pressed", js)
+
+    def test_footer_exposes_only_impressum_link(self) -> None:
+        markup = render_footer()
+
+        self.assertIn('href="/impressum"', markup)
+        self.assertIn("Impressum", markup)
+        self.assertNotIn("Partnerships", markup)
+        self.assertNotIn("Create Your Own Calendar", markup)
+
+    def test_static_pages_exist_even_when_not_linked_in_footer(self) -> None:
+        settings = {"site_title": "Test Calendar"}
+
+        impressum = render_static_page("/impressum", settings)
+        partnerships = render_static_page("/partnerships", settings)
+        create_calendar = render_static_page("/create-your-own-calendar", settings)
+
+        self.assertIsNotNone(impressum)
+        self.assertIsNotNone(partnerships)
+        self.assertIsNotNone(create_calendar)
+        self.assertIn("Impressum", impressum or "")
+        self.assertIn("Partnerships", partnerships or "")
+        self.assertIn("Create Your Own Calendar", create_calendar or "")
 
     def test_calendar_tiles_are_sorted_by_subgroup_order(self) -> None:
         first = make_entry("First Team", 1, "1")

@@ -164,6 +164,24 @@ body {
   width: min(1180px, calc(100% - 32px));
   margin: 26px auto 52px;
 }
+.static-page {
+  min-height: 48vh;
+}
+.static-content {
+  max-width: 760px;
+  padding: 6px 0 24px;
+}
+.static-content h2 {
+  margin: 0 0 18px;
+  font-size: 28px;
+  line-height: 1.2;
+}
+.static-content p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.65;
+}
 .category { margin-bottom: 34px; }
 .category-head {
   display: flex;
@@ -356,6 +374,45 @@ dialog::backdrop { background: rgba(17, 24, 39, 0.42); }
   display: grid;
   gap: 10px;
 }
+.site-footer {
+  border-top: 1px solid var(--line-soft);
+  background: var(--panel);
+}
+.site-footer-inner {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  min-height: 94px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+}
+.footer-copy {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.footer-links a {
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 14px;
+}
+.footer-links a:hover {
+  color: var(--accent);
+}
+.footer-links a:focus-visible {
+  outline: 3px solid rgba(21, 94, 239, 0.25);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
 @media (max-width: 720px) {
   .topbar {
     position: static;
@@ -400,5 +457,15 @@ dialog::backdrop { background: rgba(17, 24, 39, 0.42); }
   }
   .tile {
     min-height: 144px;
+  }
+  .site-footer-inner {
+    min-height: 118px;
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    gap: 12px;
+  }
+  .static-content h2 {
+    font-size: 24px;
   }
 }

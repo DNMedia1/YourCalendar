@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-from .page_renderer import render_home_page
+from .page_renderer import render_home_page, render_static_page
 from ..config.settings import resolve_path
 
 
@@ -23,6 +23,10 @@ class CalendarHttpRequestHandler(BaseHTTPRequestHandler):
         parsed_path = urlparse(self.path).path
         if parsed_path == "/":
             self._send_html(render_home_page(self.settings))
+            return
+        static_page = render_static_page(parsed_path, self.settings)
+        if static_page is not None:
+            self._send_html(static_page)
             return
         if parsed_path.startswith("/ics/"):
             self._send_ics_file(parsed_path)

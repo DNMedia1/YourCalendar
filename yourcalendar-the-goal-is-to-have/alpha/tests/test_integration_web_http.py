@@ -58,6 +58,9 @@ class WebHttpIntegrationTests(unittest.TestCase):
                 self.assertIn("ICS-Datei", html)
                 self.assertIn('/static/site.css', html)
                 self.assertIn('/static/site.js', html)
+                self.assertIn('href="/impressum"', html)
+                self.assertNotIn('href="/partnerships"', html)
+                self.assertNotIn('href="/create-your-own-calendar"', html)
 
                 with urlopen(f"{base_url}/static/site.css", timeout=10) as response:
                     content_type = response.headers["Content-Type"]
@@ -70,6 +73,18 @@ class WebHttpIntegrationTests(unittest.TestCase):
                     js_body = response.read().decode("utf-8")
                 self.assertEqual(content_type, "text/javascript; charset=utf-8")
                 self.assertIn("data-theme-toggle", js_body)
+
+                with urlopen(f"{base_url}/impressum", timeout=10) as response:
+                    impressum_body = response.read().decode("utf-8")
+                self.assertIn("Impressum", impressum_body)
+
+                with urlopen(f"{base_url}/partnerships", timeout=10) as response:
+                    partnerships_body = response.read().decode("utf-8")
+                self.assertIn("Partnerships", partnerships_body)
+
+                with urlopen(f"{base_url}/create-your-own-calendar", timeout=10) as response:
+                    create_calendar_body = response.read().decode("utf-8")
+                self.assertIn("Create Your Own Calendar", create_calendar_body)
 
                 with urlopen(f"{base_url}/ics/42.ics", timeout=10) as response:
                     content_type = response.headers["Content-Type"]

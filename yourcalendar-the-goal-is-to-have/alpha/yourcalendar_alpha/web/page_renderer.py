@@ -12,6 +12,7 @@ from ..domain.calendar_entry import CalendarEntry
 from ..domain.calendar_tree_node import CalendarTreeNode
 from ..domain.group_logo import GroupLogo
 from ..mapping import load_group_logos, load_mapping
+from .pages import STATIC_PAGES, VISIBLE_FOOTER_LINKS
 
 
 def render_home_page(settings: dict[str, Any]) -> str:
@@ -25,6 +26,42 @@ def render_home_page(settings: dict[str, Any]) -> str:
     )
     page_title = html.escape(settings.get("site_title", "YourCalendar Alpha"))
     calendar_count = sum(len(node.entries) for node in walk_calendar_tree(tree.values()))
+    return render_document(
+        page_title=page_title,
+        body=f"""
+  <main class="shell">
+    {category_sections}
+  </main>
+  {render_subscribe_dialog()}""",
+        summary=f"""
+      <dl class="summary">
+        <div><dt>Kategorien</dt><dd>{len(tree)}</dd></div>
+        <div><dt>Kalender</dt><dd>{calendar_count}</dd></div>
+      </dl>""",
+    )
+
+
+def render_static_page(path: str, settings: dict[str, Any]) -> str | None:
+    page = STATIC_PAGES.get(path)
+    if not page:
+        return None
+    site_title = html.escape(settings.get("site_title", "YourCalendar Alpha"))
+    page_title = html.escape(str(page["title"]))
+    body = "\n".join(f"      <p>{html.escape(paragraph)}</p>" for paragraph in page["body"])
+    return render_document(
+        page_title=f"{page_title} - {site_title}",
+        body=f"""
+  <main class="shell static-page">
+    <section class="static-content">
+      <p class="eyebrow">{html.escape(str(page["eyebrow"]))}</p>
+      <h2>{page_title}</h2>
+{body}
+    </section>
+  </main>""",
+    )
+
+
+def render_document(page_title: str, body: str, summary: str = "") -> str:
     return f"""<!doctype html>
 <html lang="de">
 <head>
@@ -45,19 +82,39 @@ def render_home_page(settings: dict[str, Any]) -> str:
           <p class="tagline">Automatisch aktualisierte Kalender zum Abonnieren.</p>
         </div>
       </div>
-      <dl class="summary">
-        <div><dt>Kategorien</dt><dd>{len(tree)}</dd></div>
-        <div><dt>Kalender</dt><dd>{calendar_count}</dd></div>
-      </dl>
+{summary}
       <button class="theme-toggle" type="button" data-theme-toggle aria-label="Darkmode umschalten" title="Darkmode umschalten">
         <span class="theme-icon" aria-hidden="true"></span>
         <span class="theme-label">Darkmode</span>
       </button>
     </div>
   </header>
-  <main class="shell">
-    {category_sections}
-  </main>
+{body}
+  {render_footer()}
+</body>
+</html>"""
+
+
+def render_footer() -> str:
+    links = "\n".join(
+        f'        <a href="{html.escape(href)}">{html.escape(label)}</a>' for href, label in VISIBLE_FOOTER_LINKS
+    )
+    return f"""
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <div>
+        <p class="product">YourCalendar Alpha</p>
+        <p class="footer-copy">Generische abonnierbare Kalender fuer automatisch aktualisierte ICS-Dateien.</p>
+      </div>
+      <nav class="footer-links" aria-label="Footer">
+{links}
+      </nav>
+    </div>
+  </footer>"""
+
+
+def render_subscribe_dialog() -> str:
+    return """
   <dialog id="subscribeDialog">
     <form method="dialog" class="dialog">
       <div class="dialog-head">
@@ -74,9 +131,7 @@ def render_home_page(settings: dict[str, Any]) -> str:
         <a id="icsLink" class="action secondary">ICS-Datei</a>
       </div>
     </form>
-  </dialog>
-</body>
-</html>"""
+  </dialog>"""
 
 
 def render_category_section(

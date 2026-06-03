@@ -219,9 +219,17 @@ Routes:
 | Route | Behavior |
 |---|---|
 | `/` | Render website HTML. |
+| `/impressum` | Render the visible Impressum page. |
+| `/partnerships` | Render the prepared Partnerships page. It is not linked in the footer yet. |
+| `/create-your-own-calendar` | Render the prepared calendar creation page. It is not linked in the footer yet. |
 | `/ics/<id>.ics` | Serve generated ICS file from configured output directory. |
 | `/static/site.css` | Serve CSS from `web/static`. |
 | `/static/site.js` | Serve browser JavaScript from `web/static`. |
+
+The footer is rendered on the home page and static pages. In the current Alpha
+only the `Impressum` link is visible. The Partnerships and Create Your Own
+Calendar pages already exist as routes, but they are intentionally hidden from
+the footer until their product workflows are ready.
 
 ## 5. Mapping Files
 
