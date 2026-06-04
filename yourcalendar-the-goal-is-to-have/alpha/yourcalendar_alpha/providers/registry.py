@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 from .base import CalendarProvider
-from .openf1_provider import OpenF1Provider
-from .thesportsdb_provider import TheSportsDBProvider
+from .openf1 import OpenF1Provider
+from .thesportsdb import TheSportsDBProvider
 
 
 def build_provider_registry(settings: dict[str, Any]) -> dict[str, CalendarProvider]:

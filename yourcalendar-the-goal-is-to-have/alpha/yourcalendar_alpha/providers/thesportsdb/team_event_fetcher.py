@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from ..domain.calendar_entry import CalendarEntry
-from ..domain.calendar_event import CalendarEvent
-from .errors import ProviderError
-from .thesportsdb_client import TheSportsDBClient
-from .thesportsdb_event_mapper import map_thesportsdb_event
+from ...domain.calendar_entry import CalendarEntry
+from ...domain.calendar_event import CalendarEvent
+from ..errors import ProviderError
+from .client import TheSportsDBClient
+from .event_mapper import map_thesportsdb_event
 
 
 class TheSportsDBTeamEventFetcher:

@@ -3,11 +3,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from urllib.request import urlopen
 
-from ..domain.calendar_entry import CalendarEntry
-from ..domain.calendar_event import CalendarEvent
-from .base import CalendarProvider
-from .openf1_client import OpenF1Client
-from .openf1_event_mapper import map_openf1_session
+from ...domain.calendar_entry import CalendarEntry
+from ...domain.calendar_event import CalendarEvent
+from ..base import CalendarProvider
+from .client import OpenF1Client
+from .event_mapper import map_openf1_session
 
 
 class OpenF1Provider(CalendarProvider):

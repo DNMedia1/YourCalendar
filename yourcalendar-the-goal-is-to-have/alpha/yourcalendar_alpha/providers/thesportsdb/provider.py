@@ -1,10 +1,10 @@
 from urllib.request import urlopen
 
-from ..domain.calendar_entry import CalendarEntry
-from ..domain.calendar_event import CalendarEvent
-from .base import CalendarProvider
-from .thesportsdb_client import TheSportsDBClient
-from .thesportsdb_team_event_fetcher import TheSportsDBTeamEventFetcher
+from ...domain.calendar_entry import CalendarEntry
+from ...domain.calendar_event import CalendarEvent
+from ..base import CalendarProvider
+from .client import TheSportsDBClient
+from .team_event_fetcher import TheSportsDBTeamEventFetcher
 
 
 class TheSportsDBProvider(CalendarProvider):

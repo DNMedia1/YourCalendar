@@ -87,8 +87,11 @@ yourcalendar_alpha/
   ics/            ICS rendering, parsing, formatting, sequence calculation
   mapping/        CSV mapping and group-logo loading
   providers/      provider contract, registry, TheSportsDB and OpenF1 implementations
+    openf1/       OpenF1 client, provider, datetime parser, event mapper
+    thesportsdb/  TheSportsDB client, provider, datetime parser, event mapper
   sync/           sync service, change counters, CLI report formatting
-  web/            HTTP handler, HTML renderer, CSS, JavaScript
+  web/            HTTP handler, page facade, CSS, JavaScript
+    rendering/    document layout, category tiles, logo rendering
 ```
 
 Compatibility modules remain at selected root paths:
@@ -199,7 +202,7 @@ Class attributes and methods:
 | `name` | Provider key used in `API-Provider`. |
 | `fetch_events(entry)` | Returns `list[CalendarEvent]` for one mapping entry. |
 
-### 4.7 `providers.thesportsdb_provider.TheSportsDBProvider`
+### 4.7 `providers.thesportsdb.provider.TheSportsDBProvider`
 
 Current concrete provider. It is intentionally sport-agnostic for team calendars:
 football, NFL, and NBA entries all use the same provider contract. The mapping
@@ -224,12 +227,12 @@ Collaborators:
 
 | Class/File | Meaning |
 |---|---|
-| `providers.thesportsdb_client.TheSportsDBClient` | Handles TheSportsDB URL construction, API-key lookup, HTTP calls, and JSON decoding. |
-| `providers.thesportsdb_team_event_fetcher.TheSportsDBTeamEventFetcher` | Fetches `eventsnext.php` and `eventslast.php` for one team ID and deduplicates mapped events. |
-| `providers.thesportsdb_event_mapper` | Converts one raw provider event into a provider-independent `CalendarEvent`. |
-| `providers.thesportsdb_datetime` | Parses TheSportsDB date/time fields into timezone-aware datetimes. |
+| `providers.thesportsdb.client.TheSportsDBClient` | Handles TheSportsDB URL construction, API-key lookup, HTTP calls, and JSON decoding. |
+| `providers.thesportsdb.team_event_fetcher.TheSportsDBTeamEventFetcher` | Fetches `eventsnext.php` and `eventslast.php` for one team ID and deduplicates mapped events. |
+| `providers.thesportsdb.event_mapper` | Converts one raw provider event into a provider-independent `CalendarEvent`. |
+| `providers.thesportsdb.datetime_parser` | Parses TheSportsDB date/time fields into timezone-aware datetimes. |
 
-### 4.8 `providers.openf1_provider.OpenF1Provider`
+### 4.8 `providers.openf1.provider.OpenF1Provider`
 
 Provider for Formula 1 event calendars through the OpenF1 API. The current Alpha
 uses one mapping entry, `Motorsport/Formel 1/Veranstaltungen`, with
@@ -249,9 +252,9 @@ Collaborators:
 
 | Class/File | Meaning |
 |---|---|
-| `providers.openf1_client.OpenF1Client` | Handles OpenF1 URL construction, HTTP calls, and JSON decoding. |
-| `providers.openf1_event_mapper` | Converts one OpenF1 session into a `CalendarEvent`. |
-| `providers.openf1_datetime` | Parses OpenF1 ISO timestamps into UTC datetimes. |
+| `providers.openf1.client.OpenF1Client` | Handles OpenF1 URL construction, HTTP calls, and JSON decoding. |
+| `providers.openf1.event_mapper` | Converts one OpenF1 session into a `CalendarEvent`. |
+| `providers.openf1.datetime_parser` | Parses OpenF1 ISO timestamps into UTC datetimes. |
 
 ### 4.8 `web.http_handler.CalendarHttpRequestHandler`
 
@@ -424,14 +427,14 @@ of editing `data/mapping.csv` manually:
 Then run:
 
 ```powershell
-python tools/resolve_manual_team_ids.py
+python tools/generate_sports_mapping.py
 ```
 
 If the generated provider lock changes unexpectedly, review the diff and only
 then run:
 
 ```powershell
-python tools/resolve_manual_team_ids.py --update-lock
+python tools/generate_sports_mapping.py --update-lock
 ```
 
 Use `--refresh-provider` only when live provider verification or ID lookup is
@@ -520,21 +523,24 @@ Avoid live network calls in normal tests. Use injected openers or fakes.
 
 Use this when a new category should have its own generated mapping source. If
 the new category can use the existing sports source format, add a source file to
-`tools/manual_mapping/config.py` instead of creating a separate script.
+`tools/mapping_generation/config.py` instead of creating a separate script.
 
 Recommended structure:
 
 ```text
 tools/
-  <category_name>_mapping/
-    __init__.py
+  create_<category_name>_mapping_source.py
+  generate_sports_mapping.py
+  mapping_generation/
     config.py
     csv_table.py
-    source_loader.py
-    builder.py
-    provider_resolver.py
+    mapping_builder.py
     provider_lock_diff.py
-  resolve_<category_name>_calendar_ids.py
+    provider_resolvers/
+      base.py
+      registry.py
+      <provider>.py
+    source_loader.py
 ```
 
 The script should:
@@ -553,7 +559,7 @@ The script should:
 The current sports generator resolves provider IDs through:
 
 ```text
-tools/manual_mapping/provider_resolvers/
+tools/mapping_generation/provider_resolvers/
   base.py          provider resolver type alias
   openf1.py        fixed Formula 1 mapping ID validation
   registry.py      API-Provider name to resolver lookup
@@ -596,7 +602,7 @@ python -m compileall yourcalendar_alpha tests tools
 
 ### 9.1 Mapping Tests
 
-`tests/test_mapping.py` verifies:
+`tests/mapping/test_mapping_loader.py` verifies:
 
 - required mapping columns are loaded
 - `Kalendername` is split into group path and display name
@@ -609,7 +615,7 @@ python -m compileall yourcalendar_alpha tests tools
 
 ### 9.2 Web Renderer Tests
 
-`tests/test_web_app.py` verifies:
+`tests/web/test_page_rendering.py` verifies:
 
 - mapping entries are grouped into the expected tree
 - public ICS URLs use the `/ics/<id>.ics` route
@@ -622,7 +628,7 @@ python -m compileall yourcalendar_alpha tests tools
 
 ### 9.3 HTTP Integration Test
 
-`tests/test_integration_web_http.py` starts an in-process HTTP server and
+`tests/web/test_http_server.py` starts an in-process HTTP server and
 verifies:
 
 - homepage renders a mapping entry
@@ -634,7 +640,7 @@ verifies:
 
 ### 9.4 Provider And Sync Tests
 
-`tests/test_provider_and_sync.py` verifies:
+`tests/providers/test_provider_and_sync.py` verifies:
 
 - TheSportsDB payloads map to `CalendarEvent`
 - OpenF1 session payloads map to `CalendarEvent`
@@ -647,7 +653,7 @@ verifies:
 
 ### 9.5 Mapping Contract Tests
 
-`tests/test_mapping_contract.py` verifies the current curated mapping:
+`tests/mapping/test_mapping_contract.py` verifies the current curated mapping:
 
 - expected league counts
 - total number of mapping rows

@@ -6,7 +6,7 @@ from typing import Any
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
-from ..domain.calendar_entry import CalendarEntry
+from ...domain.calendar_entry import CalendarEntry
 
 
 class TheSportsDBClient:

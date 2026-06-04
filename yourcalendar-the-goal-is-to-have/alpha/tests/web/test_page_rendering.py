@@ -10,7 +10,7 @@ from yourcalendar_alpha.domain.group_logo import GroupLogo
 from yourcalendar_alpha.web.page_renderer import render_category_section, render_footer, render_static_page
 
 
-STATIC_DIR = Path(__file__).resolve().parents[1] / "yourcalendar_alpha" / "web" / "static"
+STATIC_DIR = Path(__file__).resolve().parents[2] / "yourcalendar_alpha" / "web" / "static"
 
 
 class WebAppTests(unittest.TestCase):

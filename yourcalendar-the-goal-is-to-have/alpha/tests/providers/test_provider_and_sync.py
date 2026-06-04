@@ -5,13 +5,13 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fake_response import FakeResponse
-from static_provider import StaticProvider
+from tests.support.fake_response import FakeResponse
+from tests.support.static_provider import StaticProvider
 from yourcalendar_alpha.domain.calendar_entry import CalendarEntry
 from yourcalendar_alpha.domain.calendar_event import CalendarEvent
-from yourcalendar_alpha.providers.openf1_provider import OpenF1Provider
+from yourcalendar_alpha.providers.openf1 import OpenF1Provider
 from yourcalendar_alpha.providers.registry import build_provider_registry
-from yourcalendar_alpha.providers.thesportsdb_provider import TheSportsDBProvider
+from yourcalendar_alpha.providers.thesportsdb import TheSportsDBProvider
 from yourcalendar_alpha.sync.service import sync_all_calendars
 
 

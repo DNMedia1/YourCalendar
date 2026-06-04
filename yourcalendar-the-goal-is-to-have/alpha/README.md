@@ -70,18 +70,31 @@ alpha/
   public/
     ics/
   tests/
+    mapping/
+      test_mapping_contract.py
+      test_mapping_loader.py
+    providers/
+      test_provider_and_sync.py
+    support/
+      fake_response.py
+      static_provider.py
+    web/
+      test_http_server.py
+      test_page_rendering.py
   tools/
-    manual_mapping/
-      builder.py
+    create_formula1_mapping_source.py
+    generate_sports_mapping.py
+    mapping_generation/
       config.py
       csv_table.py
+      mapping_builder.py
       provider_lock_diff.py
       provider_resolvers/
         base.py
+        openf1.py
         registry.py
         thesportsdb.py
-      team_source_loader.py
-    resolve_manual_team_ids.py
+      source_loader.py
   yourcalendar_alpha/
     calendar/
       file_naming.py
@@ -106,21 +119,27 @@ alpha/
     providers/
       base.py
       errors.py
-      openf1_client.py
-      openf1_datetime.py
-      openf1_event_mapper.py
-      openf1_provider.py
+      openf1/
+        client.py
+        datetime_parser.py
+        event_mapper.py
+        provider.py
       registry.py
-      thesportsdb_client.py
-      thesportsdb_datetime.py
-      thesportsdb_event_mapper.py
-      thesportsdb_provider.py
-      thesportsdb_team_event_fetcher.py
+      thesportsdb/
+        client.py
+        datetime_parser.py
+        event_mapper.py
+        provider.py
+        team_event_fetcher.py
     sync/
       change_counter.py
       report.py
       service.py
     web/
+      rendering/
+        category_section.py
+        document.py
+        logo.py
       static/
         site.css
         site.js
@@ -183,7 +202,7 @@ Pflichtspalten, prueft leere Pflichtwerte und verhindert doppelte `ICSId`-Werte.
 
 ### 6.2 Website darstellen
 
-`yourcalendar_alpha.page_renderer.render_home_page()` liest Mapping und
+`yourcalendar_alpha.web.page_renderer.render_home_page()` liest Mapping und
 GroupLogoSettings, baut daraus eine Baumstruktur und rendert daraus HTML.
 
 Die Website-Verantwortung ist in der Alpha bewusst getrennt:
@@ -192,7 +211,8 @@ Die Website-Verantwortung ist in der Alpha bewusst getrennt:
 - `models.py`: Re-Export der Datenklassen fuer bequeme Imports.
 - `calendar/`: Baumaufbau, Zaehlung, Sortierung, Dateinamen und abonnierbare Kalender-URLs.
 - `mapping/`: CSV-Loader und Mapping-/GroupLogoSettings-Validierung.
-- `web/page_renderer.py`: HTML-Rendering.
+- `web/page_renderer.py`: Daten laden und Home-/Static-Pages zusammensetzen.
+- `web/rendering/`: Dokumentrahmen, Kachel-Rendering und Logo-Rendering.
 - `web/http_handler.py`: HTTP-Routen fuer HTML, ICS und statische Assets.
 - `web_app.py`: Serverstart und Server-Factory.
 - `web/static/site.css`: visuelles Design.
@@ -318,7 +338,7 @@ Eine kontextfremde Person kann einen neuen Eintrag so hinzufuegen:
 3. Neue Zeile in der passenden Source-Datei ergaenzen, z. B. `data/football_team_source.csv`, `data/nfl_team_source.csv` oder `data/nba_team_source.csv`.
 4. `SubGroupOrder` innerhalb derselben Liga/Untergruppe eindeutig setzen.
 5. `data/mapping.provider-lock.csv` um Team, ICSId und Provider erweitern.
-6. `python tools/resolve_manual_team_ids.py` ausfuehren, um `data/mapping.csv` neu zu erstellen.
+6. `python tools/generate_sports_mapping.py` ausfuehren, um `data/mapping.csv` neu zu erstellen.
 7. Bei Bedarf passenden Gruppenpfad in `data/group_logo_settings.csv` ergaenzen und `groupOrder` setzen.
 8. Tests ausfuehren.
 
@@ -339,7 +359,7 @@ Fussball/Deutschland/1. Bundesliga/FC Augsburg,Deutschland,Sport,1. Bundesliga,T
 
 ## 8. Mapping-ID-Pflege und Lockfile
 
-`tools/resolve_manual_team_ids.py` ist ein einmaliges Pflege- und
+`tools/generate_sports_mapping.py` ist ein einmaliges Pflege- und
 Verifikationsskript. Es enthaelt eine kuratierte Teamliste und loest diese gegen
 TheSportsDB-IDs auf.
 
@@ -358,21 +378,21 @@ Ausfuehren:
 
 ```powershell
 cd alpha
-python tools/resolve_manual_team_ids.py
+python tools/generate_sports_mapping.py
 ```
 
 Provider-IDs live neu verifizieren oder ermitteln:
 
 ```powershell
 cd alpha
-python tools/resolve_manual_team_ids.py --refresh-provider
+python tools/generate_sports_mapping.py --refresh-provider
 ```
 
 Geaenderte IDs bewusst akzeptieren:
 
 ```powershell
 cd alpha
-python tools/resolve_manual_team_ids.py --refresh-provider --update-lock
+python tools/generate_sports_mapping.py --refresh-provider --update-lock
 ```
 
 ## 9. GroupLogoSettings
@@ -421,17 +441,17 @@ TheSportsDB-Regel:
 - Events kommen aus `eventsnext.php?id=<idTeam>` und `eventslast.php?id=<idTeam>`.
 - API-Key kommt aus der Umgebungsvariable in `API-Key-Provider`.
 - Wenn kein Key vorhanden ist, wird der freie Beispiel-Key aus `settings.json` verwendet.
-- HTTP/API-Key-Zugriff liegt in `providers/thesportsdb_client.py`.
-- Team-Event-Abruf und Deduplizierung liegen in `providers/thesportsdb_team_event_fetcher.py`.
-- Mapping-ID-Aufloesung liegt unter `tools/manual_mapping/provider_resolvers/`.
+- HTTP/API-Key-Zugriff liegt in `providers/thesportsdb/client.py`.
+- Team-Event-Abruf und Deduplizierung liegen in `providers/thesportsdb/team_event_fetcher.py`.
+- Mapping-ID-Aufloesung liegt unter `tools/mapping_generation/provider_resolvers/`.
 
 OpenF1-Regel:
 
 - `ICSId=formula-1` steht fuer den Formel-1-Veranstaltungskalender.
 - Sessions kommen aus `sessions?year=<year>`.
-- HTTP-Zugriff liegt in `providers/openf1_client.py`.
-- Session-Mapping liegt in `providers/openf1_event_mapper.py`.
-- Die Source-Datei kann mit `tools/create_openf1_formula1_mapping.py` idempotent erstellt werden.
+- HTTP-Zugriff liegt in `providers/openf1/client.py`.
+- Session-Mapping liegt in `providers/openf1/event_mapper.py`.
+- Die Source-Datei kann mit `tools/create_formula1_mapping_source.py` idempotent erstellt werden.
 
 ## 11. Neuen Provider implementieren
 
@@ -505,7 +525,7 @@ Live-Provider-Verifikation:
 ```powershell
 cd alpha
 $env:RUN_LIVE_PROVIDER_TESTS='1'
-python -m unittest tests.test_mapping_contract
+python -m unittest tests.mapping.test_mapping_contract
 ```
 
 Hinweis: Der Live-Test fragt TheSportsDB ab und ist absichtlich langsam, damit

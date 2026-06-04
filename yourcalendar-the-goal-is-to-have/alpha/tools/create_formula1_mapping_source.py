@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from manual_mapping.config import FORMULA1_SOURCE, ROOT
-from manual_mapping.csv_table import read_csv_rows, write_csv_rows
+from mapping_generation.config import FORMULA1_SOURCE, ROOT
+from mapping_generation.csv_table import read_csv_rows, write_csv_rows
 
 
 FORMULA1_SOURCE_FIELDNAMES = [

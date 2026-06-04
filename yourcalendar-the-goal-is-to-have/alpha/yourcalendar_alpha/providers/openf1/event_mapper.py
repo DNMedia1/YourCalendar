@@ -5,8 +5,8 @@ import json
 from datetime import timedelta
 from typing import Any
 
-from ..domain.calendar_event import CalendarEvent
-from .openf1_datetime import parse_openf1_datetime
+from ...domain.calendar_event import CalendarEvent
+from .datetime_parser import parse_openf1_datetime
 
 
 def map_openf1_session(

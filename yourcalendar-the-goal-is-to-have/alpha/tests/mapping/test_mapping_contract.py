@@ -10,7 +10,7 @@ from urllib.parse import urlencode
 from urllib.request import urlopen
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 MAPPING = ROOT / "data" / "mapping.csv"
 LOCK = ROOT / "data" / "mapping.provider-lock.csv"
 FOOTBALL_SOURCE = ROOT / "data" / "football_team_source.csv"

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import argparse
 
-from manual_mapping.builder import build_mapping_and_lock_rows
-from manual_mapping.config import LOCK, LOCK_FIELDNAMES, MAPPING_FIELDNAMES, OUT
-from manual_mapping.csv_table import write_csv_rows
-from manual_mapping.provider_lock_diff import print_provider_lock_diff, provider_lock_changed
-from manual_mapping.team_source_loader import load_provider_lock_rows, load_team_source_rows
+from mapping_generation.config import LOCK, LOCK_FIELDNAMES, MAPPING_FIELDNAMES, OUT
+from mapping_generation.csv_table import write_csv_rows
+from mapping_generation.mapping_builder import build_mapping_and_lock_rows
+from mapping_generation.provider_lock_diff import print_provider_lock_diff, provider_lock_changed
+from mapping_generation.source_loader import load_provider_lock_rows, load_team_source_rows
 
 
 def main() -> int:

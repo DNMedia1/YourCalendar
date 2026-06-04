@@ -5,9 +5,9 @@ import json
 from datetime import timedelta
 from typing import Any
 
-from ..domain.calendar_entry import CalendarEntry
-from ..domain.calendar_event import CalendarEvent
-from .thesportsdb_datetime import parse_thesportsdb_datetime
+from ...domain.calendar_entry import CalendarEntry
+from ...domain.calendar_event import CalendarEvent
+from .datetime_parser import parse_thesportsdb_datetime
 
 
 def map_thesportsdb_event(
