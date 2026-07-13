@@ -1,0 +1,227 @@
+from __future__ import annotations
+
+import tempfile
+import unittest
+from datetime import datetime, timezone
+from pathlib import Path
+
+from tests.support.fake_response import FakeResponse
+from tests.support.static_provider import StaticProvider
+from yourcalendar_alpha.domain.calendar_entry import CalendarEntry
+from yourcalendar_alpha.domain.calendar_event import CalendarEvent
+from yourcalendar_alpha.providers.openf1 import OpenF1Provider
+from yourcalendar_alpha.providers.registry import build_provider_registry
+from yourcalendar_alpha.providers.thesportsdb import TheSportsDBProvider
+from yourcalendar_alpha.sync.service import sync_all_calendars
+
+
+class ProviderAndSyncTests(unittest.TestCase):
+    def test_provider_registry_registers_openf1(self) -> None:
+        registry = build_provider_registry(
+            {
+                "default_event_duration_minutes": 120,
+                "provider_defaults": {
+                    "OpenF1": {
+                        "base_url": "https://example.test/v1",
+                        "years": [2026],
+                    }
+                },
+            }
+        )
+
+        self.assertIn("OpenF1", registry)
+        self.assertIsInstance(registry["OpenF1"], OpenF1Provider)
+
+    def test_thesportsdb_maps_events_to_calendar_events(self) -> None:
+        payload = {
+            "events": [
+                {
+                    "idEvent": "9001",
+                    "dateEvent": "2026-08-15",
+                    "strTime": "13:30:00",
+                    "strEvent": "FC Bayern Muenchen vs Borussia Dortmund",
+                    "strHomeTeam": "FC Bayern Muenchen",
+                    "strAwayTeam": "Borussia Dortmund",
+                    "strVenue": "Allianz Arena",
+                    "strCity": "Muenchen",
+                    "strLeague": "Bundesliga",
+                }
+            ]
+        }
+        calls: list[str] = []
+
+        def opener(url: str, timeout: int = 30) -> FakeResponse:
+            calls.append(url)
+            return FakeResponse(payload)
+
+        provider = TheSportsDBProvider(
+            base_url="https://example.test/api",
+            free_api_key="123",
+            default_duration_minutes=120,
+            opener=opener,
+        )
+        entry = CalendarEntry("Fussball/DE/1. Bundesliga/Team", "DE", "Sport", "1. Bundesliga", "TheSportsDB", "", "133664", None, 1)
+
+        events = provider.fetch_events(entry)
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].uid, "thesportsdb-9001@yourcalendar-alpha")
+        self.assertEqual(events[0].location, "Allianz Arena, Muenchen")
+        self.assertEqual(len(calls), 2)
+        self.assertTrue(any("eventsnext.php?id=133664" in call for call in calls))
+        self.assertTrue(any("eventslast.php?id=133664" in call for call in calls))
+
+    def test_thesportsdb_maps_nfl_team_events_with_same_provider_contract(self) -> None:
+        payload = {
+            "events": [
+                {
+                    "idEvent": "nfl-9001",
+                    "dateEvent": "2026-09-10",
+                    "strTime": "20:20:00",
+                    "strEvent": "Kansas City Chiefs vs Las Vegas Raiders",
+                    "strHomeTeam": "Kansas City Chiefs",
+                    "strAwayTeam": "Las Vegas Raiders",
+                    "strVenue": "GEHA Field at Arrowhead Stadium",
+                    "strCity": "Kansas City",
+                    "strLeague": "NFL",
+                }
+            ]
+        }
+        calls: list[str] = []
+
+        def opener(url: str, timeout: int = 30) -> FakeResponse:
+            calls.append(url)
+            return FakeResponse(payload)
+
+        provider = TheSportsDBProvider(
+            base_url="https://example.test/api",
+            free_api_key="123",
+            default_duration_minutes=180,
+            opener=opener,
+        )
+        entry = CalendarEntry("Football/NFL/Kansas City Chiefs", "United States", "Sport", "Football/NFL", "TheSportsDB", "", "134931", None, 16)
+
+        events = provider.fetch_events(entry)
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].title, "Kansas City Chiefs vs Las Vegas Raiders")
+        self.assertEqual(events[0].location, "GEHA Field at Arrowhead Stadium, Kansas City")
+        self.assertTrue(any("eventsnext.php?id=134931" in call for call in calls))
+        self.assertTrue(any("eventslast.php?id=134931" in call for call in calls))
+
+    def test_thesportsdb_maps_nba_team_events_with_same_provider_contract(self) -> None:
+        payload = {
+            "events": [
+                {
+                    "idEvent": "nba-9001",
+                    "dateEvent": "2026-10-21",
+                    "strTime": "19:30:00",
+                    "strEvent": "Boston Celtics vs New York Knicks",
+                    "strHomeTeam": "Boston Celtics",
+                    "strAwayTeam": "New York Knicks",
+                    "strVenue": "TD Garden",
+                    "strCity": "Boston",
+                    "strLeague": "NBA",
+                }
+            ]
+        }
+        calls: list[str] = []
+
+        def opener(url: str, timeout: int = 30) -> FakeResponse:
+            calls.append(url)
+            return FakeResponse(payload)
+
+        provider = TheSportsDBProvider(
+            base_url="https://example.test/api",
+            free_api_key="123",
+            default_duration_minutes=150,
+            opener=opener,
+        )
+        entry = CalendarEntry("Basketball/NBA/Boston Celtics", "United States", "Sport", "Basketball/NBA", "TheSportsDB", "", "134860", None, 2)
+
+        events = provider.fetch_events(entry)
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].title, "Boston Celtics vs New York Knicks")
+        self.assertEqual(events[0].location, "TD Garden, Boston")
+        self.assertTrue(any("eventsnext.php?id=134860" in call for call in calls))
+        self.assertTrue(any("eventslast.php?id=134860" in call for call in calls))
+
+    def test_openf1_maps_formula1_sessions_to_calendar_events(self) -> None:
+        payload = [
+            {
+                "meeting_key": 1244,
+                "session_key": 9574,
+                "meeting_name": "Bahrain Grand Prix",
+                "meeting_official_name": "FORMULA 1 GULF AIR BAHRAIN GRAND PRIX 2026",
+                "session_name": "Race",
+                "session_type": "Race",
+                "date_start": "2026-03-08T15:00:00+00:00",
+                "date_end": "2026-03-08T17:00:00+00:00",
+                "country_name": "Bahrain",
+                "location": "Sakhir",
+                "circuit_short_name": "Sakhir",
+            }
+        ]
+        calls: list[str] = []
+
+        def opener(url: str, timeout: int = 30) -> FakeResponse:
+            calls.append(url)
+            return FakeResponse(payload)
+
+        provider = OpenF1Provider(
+            base_url="https://example.test/v1",
+            default_duration_minutes=120,
+            years=[2026],
+            opener=opener,
+        )
+        entry = CalendarEntry("Motorsport/Formel 1/Veranstaltungen", "Global", "Sport", "Motorsport/Formel 1", "OpenF1", "", "formula-1", None, 1)
+
+        events = provider.fetch_events(entry)
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].uid, "openf1-1244-9574@yourcalendar-alpha")
+        self.assertEqual(events[0].title, "Bahrain Grand Prix - Race")
+        self.assertEqual(events[0].location, "Sakhir, Sakhir, Bahrain")
+        self.assertIn("sessions?year=2026", calls[0])
+
+    def test_sync_writes_ics_and_reports_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            data_dir = root / "data"
+            data_dir.mkdir()
+            (data_dir / "mapping.csv").write_text(
+                "Kalendername,Land,Kategorie,Wettbewerb,API-Provider,API-Key-Provider,ICSId,LogoBytes,SubGroupOrder\n"
+                "Fussball/Deutschland/1. Bundesliga/Test Team,Deutschland,Sport,1. Bundesliga,TheSportsDB,,42,,1\n",
+                encoding="utf-8",
+            )
+            settings = {
+                "_root_dir": str(root),
+                "mapping_file": "data/mapping.csv",
+                "ics_output_dir": "public/ics",
+            }
+            events = [
+                CalendarEvent(
+                    uid="event-1",
+                    title="Test Team vs Other",
+                    starts_at=datetime(2026, 8, 1, 13, 30, tzinfo=timezone.utc),
+                    ends_at=datetime(2026, 8, 1, 15, 30, tzinfo=timezone.utc),
+                    location="Stadion",
+                    description="Provider Event ID: 1",
+                    source_hash="a",
+                )
+            ]
+
+            first = sync_all_calendars(settings, {"TheSportsDB": StaticProvider(events)})
+            second = sync_all_calendars(settings, {"TheSportsDB": StaticProvider(events)})
+
+            ics_path = root / "public" / "ics" / "42.ics"
+            self.assertTrue(ics_path.exists())
+            self.assertIn("BEGIN:VCALENDAR", ics_path.read_text(encoding="utf-8"))
+            self.assertEqual(first[0].created, 1)
+            self.assertEqual(second[0].created, 0)
+            self.assertEqual(second[0].updated, 0)
+
+
+if __name__ == "__main__":
+    unittest.main()
