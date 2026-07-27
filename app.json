@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "MSBrowser Alpha",
+    "slug": "msbrowser-alpha",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "msbrowser",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "com.msbrowser.alpha",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.msbrowser.alpha",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": false,
+          "data": [
+            {
+              "scheme": "http"
+            },
+            {
+              "scheme": "https"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "msbrowser"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
+    }
+  }
+}

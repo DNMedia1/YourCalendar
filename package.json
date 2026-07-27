@@ -1,0 +1,23 @@
+{
+  "name": "msbrowser-alpha",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start",
+    "start:lan": "expo start --host lan --port 8083",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "test": "node --test tests/unit/*.test.js tests/integration/*.test.js"
+  },
+  "dependencies": {
+    "babel-preset-expo": "~57.0.4",
+    "expo": "~57.0.0",
+    "react": "19.2.3",
+    "react-native": "0.86.0"
+  },
+  "overrides": {
+    "uuid": "11.1.1"
+  }
+}
